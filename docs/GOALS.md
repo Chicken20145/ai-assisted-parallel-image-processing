@@ -1,37 +1,37 @@
-# Project Goals and Success Criteria
+# Mục tiêu và tiêu chí thành công
 
-## Primary goal
+## Mục tiêu chính
 
-Build a correct and measurable parallel image-processing application that demonstrates when and why OpenMP or CUDA improves performance over sequential CPU execution.
+Xây dựng một ứng dụng xử lý ảnh song song chính xác, có thể đo lường và giải thích được khi nào, tại sao OpenMP hoặc CUDA cải thiện hiệu năng so với CPU tuần tự.
 
-## Technical goals
+## Mục tiêu kỹ thuật
 
-1. Implement Gaussian Blur, Sobel Edge Detection, and Histogram Equalization.
-2. Provide sequential CPU, OpenMP, basic CUDA, and optimized CUDA versions.
-3. Optimize at least one convolution with shared memory.
-4. Measure kernel, transfer, and end-to-end execution time separately.
-5. Validate parallel output against the sequential reference using MAE or MSE.
-6. Determine suitable OpenMP thread counts and CUDA block sizes experimentally.
-7. Implement an Auto backend using benchmark-derived rules.
-8. Translate natural-language requests into a validated JSON pipeline.
+1. Hiện thực Gaussian Blur, Sobel Edge Detection và Histogram Equalization.
+2. Cung cấp phiên bản CPU tuần tự, OpenMP, CUDA cơ bản và CUDA tối ưu.
+3. Tối ưu ít nhất một phép convolution bằng shared memory.
+4. Đo riêng thời gian kernel, truyền dữ liệu và tổng thời gian end-to-end.
+5. Kiểm tra kết quả song song với bản tuần tự bằng MAE hoặc MSE.
+6. Tìm số thread OpenMP và kích thước CUDA block phù hợp bằng thực nghiệm.
+7. Xây dựng chế độ Auto dựa trên quy tắc rút ra từ benchmark.
+8. Chuyển yêu cầu ngôn ngữ tự nhiên thành pipeline JSON được kiểm tra hợp lệ.
 
-## Success criteria
+## Tiêu chí thành công
 
-- All three algorithms pass correctness tests on normal and boundary-sized images.
-- Benchmarks cover 256x256, 512x512, Full HD, 2K, and 4K inputs.
-- Each benchmark configuration is warmed up and measured at least 20 times.
-- Reports include mean time, standard deviation, speedup, efficiency, and throughput.
-- CUDA reports distinguish kernel time from data-transfer time.
-- The interface displays input/output images, selected backend, and measured time.
-- A clean checkout can be built and run from documented instructions.
+- Cả ba thuật toán vượt qua kiểm thử với ảnh thông thường và kích thước biên.
+- Benchmark bao gồm ảnh 256x256, 512x512, Full HD, 2K và 4K.
+- Mỗi cấu hình được chạy khởi động và đo ít nhất 20 lần.
+- Báo cáo có thời gian trung bình, độ lệch chuẩn, speedup, efficiency và throughput.
+- Kết quả CUDA tách thời gian kernel khỏi thời gian truyền dữ liệu.
+- Giao diện hiển thị ảnh đầu vào, đầu ra, backend được chọn và thời gian đo.
+- Một bản clone sạch có thể build và chạy theo đúng hướng dẫn.
 
-## Explicit non-goals
+## Ngoài phạm vi
 
-- Real-time video processing in the core submission
-- MPI or multi-GPU execution
-- Training or fine-tuning an AI model
-- Object/face recognition
-- Medical diagnosis claims
-- Cloud deployment or multi-user accounts
-- More filters before the three core algorithms are complete
+- Xử lý video thời gian thực trong phiên bản chính
+- MPI hoặc chạy đa GPU
+- Huấn luyện hoặc fine-tune mô hình AI
+- Nhận dạng vật thể hoặc khuôn mặt
+- Đưa ra kết luận chẩn đoán y tế
+- Triển khai cloud hoặc tài khoản đa người dùng
+- Thêm bộ lọc mới trước khi hoàn thành ba thuật toán cốt lõi
 

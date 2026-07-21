@@ -1,86 +1,86 @@
-# Team Task Board
+# Bảng nhiệm vụ của nhóm
 
-## Roles
+## Phân công vai trò
 
-- **Member A — Parallel computing:** algorithms, correctness, OpenMP, CUDA, optimization.
-- **Member B — AI and application:** validated JSON pipeline, UI, backend integration.
-- **Member C — Operations and evaluation:** datasets, benchmark execution, charts, documentation, demo coordination.
+- **Thành viên A – Tính toán song song:** thuật toán, tính đúng đắn, OpenMP, CUDA và tối ưu.
+- **Thành viên B – AI và ứng dụng:** pipeline JSON hợp lệ, giao diện và tích hợp backend.
+- **Thành viên C – Hậu cần và đánh giá:** dữ liệu, chạy benchmark, biểu đồ, tài liệu và điều phối demo.
 
-All code must be reviewed by at least one other member before merging.
+Mọi phần code phải được ít nhất một thành viên khác review trước khi merge.
 
-## Milestone 0 — Foundation
+## Mốc 0 – Nền tảng
 
-- [x] Create repository structure and Git repository.
-- [x] Add CMake project with OpenMP and CUDA probes.
-- [ ] Confirm Release build on the local NVIDIA machine.
-- [ ] Record CPU, GPU, RAM, OS, compiler, and CUDA versions.
-- [ ] Add one small, license-compatible sample image.
+- [x] Tạo cấu trúc dự án và Git repository.
+- [x] Tạo dự án CMake có kiểm tra OpenMP và CUDA.
+- [ ] Xác nhận build Release trên máy NVIDIA cục bộ.
+- [ ] Ghi lại thông tin CPU, GPU, RAM, hệ điều hành, compiler và CUDA.
+- [ ] Thêm một ảnh mẫu nhỏ có giấy phép sử dụng phù hợp.
 
-## Milestone 1 — Sequential reference
+## Mốc 1 – Phiên bản tuần tự
 
-- [ ] Define a shared image buffer and border-handling convention.
-- [ ] Implement grayscale conversion.
-- [ ] Implement sequential Gaussian Blur.
-- [ ] Implement sequential Sobel Edge Detection.
-- [ ] Implement sequential Histogram Equalization.
-- [ ] Add correctness and edge-case tests.
+- [ ] Thiết kế bộ đệm ảnh dùng chung và quy tắc xử lý biên.
+- [ ] Hiện thực chuyển đổi grayscale.
+- [ ] Hiện thực Gaussian Blur tuần tự.
+- [ ] Hiện thực Sobel Edge Detection tuần tự.
+- [ ] Hiện thực Histogram Equalization tuần tự.
+- [ ] Viết kiểm thử tính đúng đắn và trường hợp biên.
 
-**Exit condition:** all sequential algorithms produce verified reference output.
+**Điều kiện hoàn thành:** tất cả thuật toán tuần tự tạo được kết quả tham chiếu đã kiểm chứng.
 
-## Milestone 2 — OpenMP
+## Mốc 2 – OpenMP
 
-- [ ] Implement the three OpenMP versions.
-- [ ] Test 1, 2, 4, 8, and hardware-appropriate maximum threads.
-- [ ] Compare static, dynamic, and guided scheduling where relevant.
-- [ ] Remove data races and verify output against the reference.
+- [ ] Hiện thực ba phiên bản OpenMP.
+- [ ] Thử nghiệm 1, 2, 4, 8 và số thread tối đa phù hợp với phần cứng.
+- [ ] So sánh static, dynamic và guided scheduling khi phù hợp.
+- [ ] Loại bỏ data race và đối chiếu kết quả với bản tham chiếu.
 
-**Exit condition:** correct OpenMP output with repeatable speedup data.
+**Điều kiện hoàn thành:** kết quả OpenMP chính xác và số liệu speedup có thể lặp lại.
 
-## Milestone 3 — CUDA
+## Mốc 3 – CUDA
 
-- [ ] Implement basic CUDA kernels for all three algorithms.
-- [ ] Add CUDA error checking and event-based timing.
-- [ ] Measure host-to-device, kernel, and device-to-host time separately.
-- [ ] Optimize Gaussian/Sobel using shared memory.
-- [ ] Optimize histogram using block-local shared histograms.
-- [ ] Test 8x8, 16x16, 32x8, and 32x16 blocks.
+- [ ] Hiện thực CUDA kernel cơ bản cho ba thuật toán.
+- [ ] Thêm kiểm tra lỗi CUDA và đo thời gian bằng CUDA Event.
+- [ ] Đo riêng thời gian host-to-device, kernel và device-to-host.
+- [ ] Tối ưu Gaussian/Sobel bằng shared memory.
+- [ ] Tối ưu histogram bằng histogram cục bộ trong shared memory của block.
+- [ ] Thử block 8x8, 16x16, 32x8 và 32x16.
 
-**Exit condition:** correct basic and optimized CUDA versions with documented gains.
+**Điều kiện hoàn thành:** CUDA cơ bản và tối ưu cho kết quả đúng, mức cải thiện được ghi nhận.
 
-## Milestone 4 — Benchmark and analysis
+## Mốc 4 – Benchmark và phân tích
 
-- [ ] Prepare 256x256, 512x512, Full HD, 2K, and 4K inputs.
-- [ ] Add warm-up runs and at least 20 measured repetitions.
-- [ ] Export results to CSV.
-- [ ] Calculate mean, standard deviation, speedup, efficiency, and throughput.
-- [ ] Produce comparison charts.
-- [ ] Derive rules for the Auto backend.
+- [ ] Chuẩn bị ảnh 256x256, 512x512, Full HD, 2K và 4K.
+- [ ] Thêm lần chạy khởi động và ít nhất 20 lần đo chính thức.
+- [ ] Xuất kết quả ra CSV.
+- [ ] Tính trung bình, độ lệch chuẩn, speedup, efficiency và throughput.
+- [ ] Vẽ biểu đồ so sánh.
+- [ ] Rút ra quy tắc lựa chọn backend Auto.
 
-**Exit condition:** results are reproducible and every performance claim is supported by data.
+**Điều kiện hoàn thành:** kết quả có thể tái lập và mọi nhận định hiệu năng đều có số liệu hỗ trợ.
 
-## Milestone 5 — UI and AI assistance
+## Mốc 5 – Giao diện và AI hỗ trợ
 
-- [ ] Upload and preview an image.
-- [ ] Select sequential, OpenMP, CUDA, or Auto backend.
-- [ ] Display output image, runtime, and speedup.
-- [ ] Define a strict JSON schema for supported pipelines.
-- [ ] Convert natural-language requests to schema-compliant JSON.
-- [ ] Validate operation names and parameter ranges before execution.
-- [ ] Make AI explanations use measured data only.
+- [ ] Tải lên và xem trước ảnh.
+- [ ] Chọn CPU tuần tự, OpenMP, CUDA hoặc Auto.
+- [ ] Hiển thị ảnh đầu ra, thời gian và speedup.
+- [ ] Định nghĩa JSON schema nghiêm ngặt cho pipeline được hỗ trợ.
+- [ ] Chuyển yêu cầu tự nhiên thành JSON đúng schema.
+- [ ] Kiểm tra tên thao tác và khoảng tham số trước khi thực thi.
+- [ ] Bảo đảm AI chỉ giải thích từ số liệu đã đo.
 
-**Exit condition:** the full demo works without manual code changes.
+**Điều kiện hoàn thành:** toàn bộ kịch bản demo chạy mà không cần sửa code thủ công.
 
-## Milestone 6 — Submission
+## Mốc 6 – Nộp bài
 
-- [ ] Reproduce the build from a clean checkout.
-- [ ] Finalize report, diagrams, tables, and limitations.
-- [ ] Prepare slides and a five-to-seven-minute demo script.
-- [ ] Record a backup demonstration video.
-- [ ] Tag the final Git commit as `v1.0.0`.
+- [ ] Kiểm tra build lại từ một bản clone sạch.
+- [ ] Hoàn thiện báo cáo, sơ đồ, bảng số liệu và giới hạn dự án.
+- [ ] Chuẩn bị slide và kịch bản demo từ năm đến bảy phút.
+- [ ] Quay video demo dự phòng.
+- [ ] Gắn tag Git cuối cùng là `v1.0.0`.
 
-## Optional work — only after all exit conditions pass
+## Phần tùy chọn – chỉ làm sau khi đạt mọi điều kiện
 
-- [ ] Batch processing for a directory of images.
-- [ ] A short offline video demonstration.
-- [ ] Compare the local GPU with one Google Colab GPU as separate environments.
+- [ ] Xử lý hàng loạt một thư mục ảnh.
+- [ ] Demo một đoạn video offline ngắn.
+- [ ] So sánh GPU cục bộ với một GPU Google Colab như hai môi trường riêng biệt.
 

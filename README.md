@@ -1,44 +1,44 @@
-# AI-Assisted Parallel Image Processing Using OpenMP and CUDA
+# Xử lý ảnh song song có AI hỗ trợ bằng OpenMP và CUDA
 
-## Project objective
+## Mục tiêu dự án
 
-Design, implement, and evaluate a parallel image-processing system using sequential CPU, OpenMP, basic CUDA, and optimized CUDA implementations. An AI-assisted layer translates natural-language requests into a validated image-processing pipeline.
+Thiết kế, hiện thực và đánh giá một hệ thống xử lý ảnh song song gồm các phiên bản CPU tuần tự, OpenMP, CUDA cơ bản và CUDA tối ưu. Lớp AI hỗ trợ chuyển yêu cầu ngôn ngữ tự nhiên thành pipeline xử lý ảnh đã được kiểm tra tính hợp lệ.
 
-## Fixed scope
+## Phạm vi cố định
 
-The core project contains exactly three algorithms:
+Dự án tập trung vào đúng ba thuật toán:
 
 1. Gaussian Blur
 2. Sobel Edge Detection
 3. Histogram Equalization
 
-Each algorithm will have four implementations:
+Mỗi thuật toán có bốn phiên bản:
 
-- Sequential CPU baseline
-- OpenMP CPU version
-- Basic CUDA version
-- Optimized CUDA version
+- CPU tuần tự làm mốc so sánh
+- CPU song song bằng OpenMP
+- CUDA cơ bản
+- CUDA tối ưu
 
-The project is complete when all implementations are correct, reproducible benchmarks are available, the UI works reliably, and AI can return a validated pipeline. Video, multi-GPU, MPI, model training, and cloud deployment are outside the core scope.
+Dự án được xem là hoàn thành khi các phiên bản cho kết quả đúng, benchmark có thể tái lập, giao diện hoạt động ổn định và AI tạo được pipeline hợp lệ. Video, đa GPU, MPI, huấn luyện mô hình và triển khai cloud nằm ngoài phạm vi cốt lõi.
 
-## Repository structure
+## Cấu trúc repository
 
 ```text
-app/            User interface and AI pipeline integration
-benchmarks/     Benchmark definitions and generated results
-data/samples/   Small test images
-docs/           Goals, task board, design and reports
-include/        Shared C++/CUDA headers
-scripts/        Build and benchmark helpers
-src/cpu/        Sequential implementations
-src/openmp/     OpenMP implementations
-src/cuda/       CUDA implementations
-tests/          Correctness and edge-case tests
+app/            Giao diện và tích hợp pipeline AI
+benchmarks/     Định nghĩa benchmark và kết quả sinh ra
+data/samples/   Ảnh kiểm thử dung lượng nhỏ
+docs/           Mục tiêu, nhiệm vụ, thiết kế và báo cáo
+include/        Header C++/CUDA dùng chung
+scripts/        Công cụ build và benchmark
+src/cpu/        Phiên bản CPU tuần tự
+src/openmp/     Phiên bản OpenMP
+src/cuda/       Phiên bản CUDA
+tests/          Kiểm tra tính đúng đắn và trường hợp biên
 ```
 
-## Initial build
+## Build ban đầu
 
-Requirements: CMake, a C++ compiler, CUDA Toolkit, and an OpenMP-capable compiler.
+Yêu cầu: CMake, trình biên dịch C++, CUDA Toolkit và trình biên dịch hỗ trợ OpenMP.
 
 ```powershell
 cmake -S . -B build
@@ -46,16 +46,16 @@ cmake --build build --config Release
 ./build/Release/parallel_image_processing.exe
 ```
 
-On single-config generators, the executable may be located directly under `build/`.
+Với trình build một cấu hình, file thực thi có thể nằm trực tiếp trong `build/`.
 
-## Evaluation metrics
+## Chỉ số đánh giá
 
-- End-to-end execution time
-- CUDA kernel time and host-device transfer time
+- Tổng thời gian xử lý end-to-end
+- Thời gian CUDA kernel và truyền dữ liệu CPU–GPU
 - Speedup: `S(p) = T(1) / T(p)`
-- OpenMP efficiency: `E(p) = S(p) / p`
-- Throughput in megapixels per second
-- MAE/MSE against the sequential reference
+- Hiệu suất OpenMP: `E(p) = S(p) / p`
+- Thông lượng triệu pixel/giây
+- MAE/MSE so với phiên bản CPU tuần tự
 
-See `docs/GOALS.md` and `docs/TASKS.md` for the agreed scope and work plan.
+Xem `docs/GOALS.md` và `docs/TASKS.md` để biết phạm vi và kế hoạch công việc đã thống nhất.
 
