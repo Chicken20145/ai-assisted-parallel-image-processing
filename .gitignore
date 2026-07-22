@@ -1,7 +1,9 @@
 build/
+build-colab/
 .vs/
 .vscode/
 __pycache__/
+.venv/
 *.pyc
 *.obj
 *.o
@@ -13,6 +15,7 @@ __pycache__/
 *.jpg
 *.jpeg
 !data/samples/.gitkeep
+data/downloads/
+data/external/
 benchmarks/results/
 .env
-

@@ -1,0 +1,9 @@
+Pillow>=11.0,<13
+numpy>=2.0,<3
+pandas>=2.2,<4
+matplotlib>=3.9,<4
+jsonschema>=4.23,<5
+pydantic>=2.10,<3
+streamlit>=1.41,<2
+openai>=1.59,<3
+pytest>=8.3,<10
