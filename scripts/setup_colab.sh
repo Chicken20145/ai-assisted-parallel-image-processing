@@ -19,11 +19,8 @@ python3 -m pip install --quiet -r requirements.txt
 python3 scripts/download_datasets.py
 python3 scripts/prepare_benchmark_data.py
 
-cmake -S . -B build-colab -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_CUDA_ARCHITECTURES=native
-cmake --build build-colab --parallel "$(nproc)"
-./build-colab/parallel_image_processing
+bash scripts/build_colab.sh
+bash scripts/test_colab.sh
 
 bash scripts/check_environment_colab.sh
 echo 'Colab setup completed successfully.'
