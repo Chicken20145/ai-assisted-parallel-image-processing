@@ -30,6 +30,18 @@ Colab dùng máy ảo tạm thời và loại GPU không cố định. Mỗi phi
 
 Notebook khởi động nằm tại `notebooks/colab_setup.ipynb`. Dữ liệu và thư viện phải được thiết lập lại sau khi runtime bị hủy; CSV/biểu đồ quan trọng cần lưu sang Drive ở cuối phiên.
 
+### Phiên Colab đã xác nhận ngày 27/07/2026
+
+- GPU: NVIDIA T4.
+- CUDA compiler: 12.8.93.
+- Host compiler: GNU 11.4.0.
+- OpenMP: 2 luồng.
+- CUDA devices: 1.
+- CTest: 100% test đạt.
+- Probe và benchmark smoke test: đạt.
+
+Cấu hình này chỉ xác nhận script hoạt động trên một phiên cụ thể, không phải cấu hình cố định của Colab và không được mặc định dùng cho phiên benchmark khác.
+
 ## Thành phần Python
 
 `requirements.txt` bao gồm thư viện xử lý ảnh/dữ liệu, biểu đồ, validation JSON, giao diện Streamlit, OpenAI API và pytest. Cài đặt bằng `scripts/setup_windows.ps1`; không cài trực tiếp vào Python hệ thống.

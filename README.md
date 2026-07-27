@@ -115,3 +115,5 @@ Với trình build một cấu hình, file thực thi có thể nằm trực ti�
 - MAE/MSE so với phiên bản CPU tuần tự
 
 Xem `docs/GOALS.md` và `docs/TASKS.md` để biết phạm vi và kế hoạch công việc đã thống nhất.
+
+Thành viên A/B/C bắt đầu từ [`docs/TEAM_HANDOFF.md`](docs/TEAM_HANDOFF.md) để biết branch hiện tại, phần đã sẵn sàng, cách dùng Colab và đầu ra có thể bàn giao.
