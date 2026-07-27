@@ -75,6 +75,8 @@ Hướng dẫn đầy đủ: [`docs/SETUP_COLAB.md`](docs/SETUP_COLAB.md).
 3. Chạy lần lượt các cell; cell chính gọi `scripts/setup_colab.sh` để cài dependency, tải dữ liệu, build Release và ghi cấu hình runtime.
 4. Chạy benchmark trên `/content`; chỉ sao chép kết quả cuối sang Google Drive để độ trễ Drive không ảnh hưởng phép đo.
 
+Repository là private nên mỗi thành viên phải có quyền collaborator và cấp quyền GitHub cho Colab. Với branch chứa dấu `/`, dùng URL đã mã hóa trong `docs/SETUP_COLAB.md`.
+
 Có thể chạy trực tiếp trong một repository đã clone:
 
 ```bash

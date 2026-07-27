@@ -7,8 +7,17 @@ Colab phù hợp để build, chạy và benchmark CUDA khi thành viên không 
 Trong thời gian các thành viên làm song song trên nhánh A, mở notebook trực tiếp từ nhánh:
 
 ```text
-https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/feature/core-api-cpu/notebooks/colab_setup.ipynb
+https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/feature%2Fcore-api-cpu/notebooks/colab_setup.ipynb
 ```
+
+Repository hiện là private. Lần đầu mở notebook, Colab có thể hiển thị **Không tìm thấy sổ tay / Notebook not found** dù file tồn tại. Khi đó:
+
+1. Nhấn **Authorize with GitHub / Cấp quyền với GitHub** trong hộp thoại lỗi.
+2. Đăng nhập đúng tài khoản GitHub có quyền đọc repository.
+3. Chấp nhận quyền đọc repository cho Google Colab.
+4. Mở lại URL phía trên hoặc reload trang.
+
+Mỗi thành viên B/C phải được thêm làm collaborator của repository trước khi cấp quyền. Không gửi GitHub token qua chat và không ghi token vào notebook.
 
 Sau khi PR được merge vào `main`, dùng địa chỉ ổn định:
 
@@ -155,6 +164,13 @@ Không cần lưu `.venv`, `build-colab/` hoặc toàn bộ dataset lên Drive; 
 ### `No NVIDIA GPU detected`
 
 Runtime chưa bật GPU hoặc Colab chưa cấp GPU. Chọn lại runtime GPU và reconnect. Nếu vẫn không có, thử lại khi tài nguyên khả dụng.
+
+### `Notebook not found` hoặc GitHub API trả 404
+
+- Xác nhận đang dùng URL có branch mã hóa `feature%2Fcore-api-cpu`, không dùng `feature/core-api-cpu` trực tiếp trong URL Colab.
+- Nhấn **Authorize with GitHub** và đăng nhập tài khoản có quyền truy cập repository private.
+- Chủ repository phải thêm tài khoản B/C làm collaborator; quyền truy cập Colab không thể thay thế quyền GitHub.
+- Nếu vừa được thêm quyền, reload Colab hoặc mở lại notebook từ URL đã mã hóa.
 
 ### Không tìm thấy `nvcc`
 
