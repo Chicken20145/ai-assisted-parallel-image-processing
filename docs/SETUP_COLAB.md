@@ -4,7 +4,13 @@ Colab phù hợp để build, chạy và benchmark CUDA khi thành viên không 
 
 ## 1. Mở notebook
 
-Sau khi nhánh setup được merge vào `main`, mở:
+Trong thời gian các thành viên làm song song trên nhánh A, mở notebook trực tiếp từ nhánh:
+
+```text
+https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/feature/core-api-cpu/notebooks/colab_setup.ipynb
+```
+
+Sau khi PR được merge vào `main`, dùng địa chỉ ổn định:
 
 ```text
 https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/main/notebooks/colab_setup.ipynb
@@ -30,13 +36,17 @@ Nếu `nvidia-smi` không hiển thị GPU, không tiếp tục benchmark CUDA.
 
 ## 3. Clone và setup tự động
 
-Notebook đã có sẵn cell:
+Notebook có biến `GIT_REF` để chọn đúng nhánh đang phối hợp. Trong giai đoạn hiện tại giá trị là `feature/core-api-cpu`; sau khi merge đổi thành `main`.
+
+Notebook đã có sẵn quy trình tương đương:
 
 ```python
+REPOSITORY = 'https://github.com/Chicken20145/ai-assisted-parallel-image-processing.git'
+GIT_REF = 'feature/core-api-cpu'
 %cd /content
-!test -d ai-assisted-parallel-image-processing || git clone https://github.com/Chicken20145/ai-assisted-parallel-image-processing.git
+!test -d ai-assisted-parallel-image-processing || git clone --branch {GIT_REF} {REPOSITORY}
 %cd /content/ai-assisted-parallel-image-processing
-!git pull --ff-only
+!git pull --ff-only origin {GIT_REF}
 !bash scripts/setup_colab.sh
 ```
 
@@ -49,7 +59,7 @@ Script tự động:
 5. Tạo 15 ảnh benchmark ở 5 độ phân giải.
 6. Cấu hình CUDA theo GPU thực tế bằng `CMAKE_CUDA_ARCHITECTURES=native`.
 7. Build Release trong `build-colab/`.
-8. Chạy chương trình probe.
+8. Chạy CTest và chương trình probe.
 9. Ghi cấu hình vào `data/external/environment_colab.txt`.
 
 Kết thúc thành công sẽ có dòng:
@@ -58,7 +68,19 @@ Kết thúc thành công sẽ có dòng:
 Colab setup completed successfully.
 ```
 
-## 4. Kiểm tra kết quả setup
+## 4. Cập nhật tăng dần khi làm song song
+
+Trong cùng một runtime, khi A push code mới thì B/C chỉ cần:
+
+```bash
+git pull --ff-only origin feature/core-api-cpu
+bash scripts/build_colab.sh
+bash scripts/test_colab.sh
+```
+
+Không chạy lại toàn bộ setup, không tải lại dataset và không cài lại package. Nếu muốn theo nhánh khác, thay tên branch nhưng không trộn thay đổi local chưa commit trong Colab.
+
+## 5. Kiểm tra kết quả setup
 
 ```bash
 !ls data/external/benchmark_suite/*.png | wc -l
@@ -72,7 +94,7 @@ Kết quả mong đợi:
 - `CUDA devices available` bằng 1 hoặc lớn hơn.
 - File môi trường ghi rõ GPU, CUDA, CPU, RAM và thời điểm chạy.
 
-## 5. Quy tắc benchmark trên Colab
+## 6. Quy tắc benchmark trên Colab
 
 - Chạy code và đọc ảnh từ ổ cục bộ `/content`.
 - Không benchmark trực tiếp trên thư mục Google Drive vì độ trễ mạng làm sai lệch thời gian end-to-end.
@@ -81,7 +103,7 @@ Kết quả mong đợi:
 - Không gộp số liệu giữa các phiên có GPU hoặc CPU khác nhau.
 - Luôn giữ `environment_colab.txt` cùng file CSV tương ứng.
 
-## 6. Lưu kết quả sang Google Drive
+## 7. Lưu kết quả sang Google Drive
 
 Chỉ mount Drive sau khi benchmark hoặc ngay trước lúc lưu kết quả:
 
@@ -104,7 +126,7 @@ shutil.copytree(source, destination, dirs_exist_ok=True)
 
 Nên tạo thư mục riêng theo ngày và cấu hình GPU để tránh ghi đè kết quả của phiên trước.
 
-## 7. Sử dụng API key AI
+## 8. Sử dụng API key AI
 
 Không ghi API key trực tiếp vào notebook. Dùng mục **Secrets** của Colab với tên `OPENAI_API_KEY`, sau đó đọc trong code:
 
@@ -117,7 +139,7 @@ os.environ['OPENAI_API_KEY'] = userdata.get('OPENAI_API_KEY')
 
 Không in biến này ra output và không lưu output chứa secret.
 
-## 8. Chạy lại sau khi runtime bị reset
+## 9. Chạy lại sau khi runtime bị reset
 
 File trong `/content` sẽ mất khi runtime bị hủy. Trong phiên mới:
 
@@ -128,7 +150,7 @@ File trong `/content` sẽ mất khi runtime bị hủy. Trong phiên mới:
 
 Không cần lưu `.venv`, `build-colab/` hoặc toàn bộ dataset lên Drive; script có thể tái tạo chúng.
 
-## 9. Lỗi thường gặp
+## 10. Lỗi thường gặp
 
 ### `No NVIDIA GPU detected`
 

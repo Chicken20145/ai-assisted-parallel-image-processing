@@ -123,6 +123,7 @@ Kết quả probe đúng phải hiển thị số luồng OpenMP lớn hơn 0 v�
 ## 8. Kiểm tra nhanh sau setup
 
 ```powershell
+.\scripts\test_windows.ps1 -BuildFirst
 .\.venv\Scripts\python.exe -c "import PIL,numpy,pandas,matplotlib,jsonschema,pydantic,streamlit,openai,pytest; print('Python dependencies OK')"
 Get-ChildItem .\data\external\benchmark_suite\*.png | Measure-Object
 .\build\parallel_image_processing.exe

@@ -52,6 +52,20 @@ Yêu cầu: Visual Studio có workload **Desktop development with C++**, CUDA To
 
 Script tự tìm MSVC, CMake và Ninja đi kèm Visual Studio, kiểm tra checksum dữ liệu, tạo 15 ảnh benchmark ở năm độ phân giải và build chương trình ở chế độ Release.
 
+Chạy kiểm thử lõi CPU:
+
+```powershell
+.\scripts\test_windows.ps1 -BuildFirst
+```
+
+Chạy benchmark tổng hợp tối thiểu:
+
+```powershell
+.\build\image_benchmark.exe --algorithm gaussian_blur --backend sequential --width 1920 --height 1080 --channels 3 --kernel-size 5 --sigma 1.2 --warmup 3 --runs 20
+```
+
+API tích hợp được mô tả trong [`docs/API.md`](docs/API.md); công thức và quy tắc biên nằm trong [`docs/ALGORITHMS.md`](docs/ALGORITHMS.md).
+
 ## Thiết lập Google Colab
 
 Hướng dẫn đầy đủ: [`docs/SETUP_COLAB.md`](docs/SETUP_COLAB.md).
@@ -65,6 +79,14 @@ Có thể chạy trực tiếp trong một repository đã clone:
 
 ```bash
 bash scripts/setup_colab.sh
+```
+
+Khi đã setup trong cùng runtime và chỉ cần cập nhật code mới:
+
+```bash
+git pull --ff-only
+bash scripts/build_colab.sh
+bash scripts/test_colab.sh
 ```
 
 GPU, CPU, CUDA và giới hạn Colab có thể thay đổi giữa các phiên. Không gộp số đo của các phiên có cấu hình khác nhau nếu không ghi chú rõ.

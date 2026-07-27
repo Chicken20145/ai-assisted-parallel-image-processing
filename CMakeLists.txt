@@ -8,6 +8,16 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 find_package(OpenMP REQUIRED)
 
+add_library(image_processing_core
+    src/common/error_metrics.cpp
+    src/common/processing_api.cpp
+    src/cpu/grayscale.cpp
+    src/cpu/gaussian.cpp
+    src/cpu/sobel.cpp
+    src/cpu/histogram_equalization.cpp
+)
+target_include_directories(image_processing_core PUBLIC include)
+
 add_executable(parallel_image_processing
     src/main.cpp
     src/openmp/parallel_probe.cpp
@@ -15,6 +25,15 @@ add_executable(parallel_image_processing
 )
 
 target_include_directories(parallel_image_processing PRIVATE include)
-target_link_libraries(parallel_image_processing PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries(parallel_image_processing PRIVATE image_processing_core OpenMP::OpenMP_CXX)
 set_target_properties(parallel_image_processing PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
+add_executable(image_benchmark src/benchmark_cli.cpp)
+target_link_libraries(image_benchmark PRIVATE image_processing_core)
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(cpu_algorithm_tests tests/test_cpu_algorithms.cpp)
+    target_link_libraries(cpu_algorithm_tests PRIVATE image_processing_core)
+    add_test(NAME cpu_algorithm_tests COMMAND cpu_algorithm_tests)
+endif()
