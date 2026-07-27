@@ -19,7 +19,7 @@
 
 ### Thứ tự thực hiện
 
-1. CPU tuần tự và test trường hợp biên — đã có trên `feature/core-api-cpu`.
+1. CPU tuần tự và test trường hợp biên — đã merge vào `main`.
 2. OpenMP Gaussian/Sobel theo pixel hoặc hàng với `schedule(static)`.
 3. OpenMP Histogram bằng histogram riêng từng thread rồi hợp nhất.
 4. Thử 1, 2, 4, 8 và số thread hợp lý; không hard-code theo máy.
@@ -118,7 +118,7 @@ C có quyền từ chối số liệu thiếu cấu hình máy, số lần chạ
 
 ### A làm tiếp
 
-- Triển khai ba thuật toán OpenMP trên API hiện tại.
+- Tạo branch mới từ `main` và triển khai ba thuật toán OpenMP trên API hiện tại.
 - Thêm test so sánh OpenMP với Sequential.
 - Sau khi OpenMP ổn định mới chuyển sang CUDA Basic.
 

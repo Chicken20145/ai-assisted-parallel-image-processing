@@ -40,7 +40,7 @@ tests/          Kiểm thử tính đúng đắn
 
 ## Trạng thái hiện tại
 
-- Nhánh phát triển: `feature/core-api-cpu`.
+- Nhánh nền ổn định cho cả nhóm: `main`.
 - Đã có setup Windows và Google Colab có thể tái lập.
 - Đã tải BSDS300 và tạo 15 ảnh benchmark cục bộ.
 - Đã có API chung, CPU tuần tự, CTest, MAE/MSE và CLI benchmark tổng hợp.
@@ -48,12 +48,12 @@ tests/          Kiểm thử tính đúng đắn
 - Chưa triển khai thuật toán OpenMP, CUDA Basic, CUDA Optimized, adapter UI và đọc ảnh thật trong benchmark CLI.
 - Backend chưa triển khai trả `BackendUnavailable`; đây là hành vi có chủ ý.
 
-PR hiện tại:
+Các PR nền tảng đã merge:
 
-- [PR #1 – Setup Windows, Colab và dữ liệu](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/1).
-- [PR #2 – Core API và CPU tuần tự](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/2).
+- [PR #1 – Setup Windows, Colab và dữ liệu](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/1) — đã merge.
+- [PR #2 – Core API và CPU tuần tự](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/2) — đã merge.
 
-PR #2 đang dựa trên PR #1. Merge PR #1 trước, đổi base PR #2 sang `main`, sau đó merge PR #2.
+Mọi nhánh nhiệm vụ mới phải tạo từ `main` mới nhất.
 
 ## Hợp đồng ảnh
 

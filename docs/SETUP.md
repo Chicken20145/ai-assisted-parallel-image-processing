@@ -25,7 +25,8 @@ git --version
 ```powershell
 git clone https://github.com/Chicken20145/ai-assisted-parallel-image-processing.git
 Set-Location .\ai-assisted-parallel-image-processing
-git switch feature/core-api-cpu
+git switch main
+git pull --ff-only origin main
 
 .\scripts\setup_windows.ps1
 .\scripts\download_datasets.ps1
@@ -59,7 +60,7 @@ Repository là private. Mỗi thành viên phải là collaborator và cấp quy
 Mở notebook nhánh hiện tại:
 
 ```text
-https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/feature%2Fcore-api-cpu/notebooks/colab_setup.ipynb
+https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/main/notebooks/colab_setup.ipynb
 ```
 
 Nếu báo 404:
@@ -67,7 +68,7 @@ Nếu báo 404:
 1. Vào **File → Open notebook → GitHub**.
 2. Bật **Bao gồm các kho lưu trữ riêng tư**.
 3. Authorize GitHub bằng tài khoản có quyền repository.
-4. Chọn branch `feature/core-api-cpu` và `notebooks/colab_setup.ipynb`.
+4. Chọn branch `main` và `notebooks/colab_setup.ipynb`.
 
 Sau đó:
 
@@ -81,7 +82,7 @@ Trong cùng runtime, cập nhật code mới mà không setup lại:
 
 ```bash
 %cd /content/ai-assisted-parallel-image-processing
-!git pull --ff-only origin feature/core-api-cpu
+!git pull --ff-only origin main
 !bash scripts/build_colab.sh
 !bash scripts/test_colab.sh
 ```
@@ -157,6 +158,6 @@ Luôn lưu CSV cùng `environment_colab.txt`. Không gộp dữ liệu giữa ha
 - Không có MSVC/CMake: bổ sung workload C++ và CMake tools trong Visual Studio Installer.
 - Không có `nvcc`: cài CUDA Toolkit hoặc chọn lại Colab GPU runtime.
 - `nvidia-smi` không nhận GPU: kiểm tra driver/runtime.
-- Colab 404: authorize private repository và dùng URL có `feature%2Fcore-api-cpu`.
+- Colab 404: authorize private repository, chọn branch `main` rồi mở lại notebook.
 - Runtime Colab reset: chạy lại notebook từ đầu; chỉ kết quả đã chép sang Drive được giữ lại.
 - Drive chậm: không dùng Drive làm thư mục benchmark trực tiếp.
