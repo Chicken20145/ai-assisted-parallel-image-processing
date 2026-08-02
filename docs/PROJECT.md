@@ -43,9 +43,9 @@ tests/          Kiểm thử tính đúng đắn
 - Nhánh nền ổn định cho cả nhóm: `main`.
 - Đã có setup Windows và Google Colab có thể tái lập.
 - Đã tải BSDS300 và tạo 15 ảnh benchmark cục bộ.
-- Đã có API chung, CPU tuần tự, CTest, MAE/MSE và CLI benchmark tổng hợp.
+- Đã có API chung, CPU tuần tự, OpenMP, CTest, MAE/MSE và CLI benchmark tổng hợp.
 - Đã triển khai grayscale, Gaussian Blur, Sobel và Histogram Equalization tuần tự.
-- Chưa triển khai thuật toán OpenMP, CUDA Basic, CUDA Optimized, adapter UI và đọc ảnh thật trong benchmark CLI.
+- Chưa triển khai CUDA Basic, CUDA Optimized, adapter UI và đọc ảnh thật trong benchmark CLI.
 - Backend chưa triển khai trả `BackendUnavailable`; đây là hành vi có chủ ý.
 
 Các PR nền tảng đã merge:
@@ -98,6 +98,7 @@ Tham số:
 
 - Gaussian: `kernel_size` là 3, 5 hoặc 7; `sigma` từ 0.1 đến 10.0.
 - Sobel: `threshold` từ 0 đến 255.
+- OpenMP: `thread_count` từ 1 đến 1024; giá trị 0 để runtime tự chọn.
 - Sobel threshold 0 trả gradient 0–255; threshold lớn hơn 0 trả ảnh nhị phân.
 
 Đầu ra:
@@ -108,9 +109,18 @@ Tham số:
 | Sobel | Grayscale một kênh |
 | Histogram Equalization | Grayscale một kênh |
 
-Mã lỗi chung: `None`, `InvalidImage`, `InvalidParameters`, `BackendUnavailable`, `InternalError`. B phải kiểm tra `result.ok()` trước khi đọc ảnh đầu ra.
+`ProcessingResult::threads_used` cho biết số thread được cấu hình cho lần chạy. Mã lỗi chung: `None`, `InvalidImage`, `InvalidParameters`, `BackendUnavailable`, `InternalError`. B phải kiểm tra `result.ok()` trước khi đọc ảnh đầu ra.
 
 Timing chung gồm `allocation_ms`, `h2d_ms`, `kernel_ms`, `d2h_ms`, `total_ms`. CPU tuần tự hiện dùng `kernel_ms == total_ms`; CUDA phải tách riêng các giai đoạn.
+
+## OpenMP
+
+- Gaussian và Sobel song song hóa vòng lặp theo hàng với `schedule(static)`.
+- Chuyển RGB sang grayscale cũng được song song hóa khi backend là OpenMP.
+- Histogram Equalization dùng histogram 256 mức riêng cho từng thread, sau đó hợp nhất.
+- Ánh xạ CDF được song song hóa theo pixel.
+- Backend OpenMP giữ nguyên công thức, cách làm tròn, quy tắc biên và kiểu đầu ra của Sequential.
+- Test yêu cầu kết quả khớp tuyệt đối: MAE = 0, MSE = 0, max absolute error = 0.
 
 ## Quy tắc tính toán
 
