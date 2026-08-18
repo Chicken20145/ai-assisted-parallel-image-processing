@@ -32,6 +32,7 @@ struct ProcessingParams {
     int kernel_size = 3;
     float sigma = 1.0F;
     int threshold = 100;
+    int thread_count = 0;
 };
 
 struct Timing {
@@ -46,6 +47,7 @@ struct ProcessingResult {
     Image output;
     Timing timing;
     Backend backend_used = Backend::Sequential;
+    int threads_used = 1;
     ProcessingError error = ProcessingError::None;
     std::string error_message;
 

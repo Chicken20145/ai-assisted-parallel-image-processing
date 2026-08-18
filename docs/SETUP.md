@@ -136,6 +136,19 @@ Colab:
 
 CLI hiện tạo ảnh tổng hợp để kiểm tra pipeline; chưa dùng số liệu này làm kết luận benchmark cuối cùng trên dataset.
 
+Benchmark OpenMP với số thread cụ thể:
+
+```powershell
+.\build\image_benchmark.exe `
+  --algorithm gaussian_blur `
+  --backend openmp --threads 4 `
+  --width 1920 --height 1080 --channels 3 `
+  --kernel-size 5 --sigma 1.2 `
+  --warmup 3 --runs 20
+```
+
+Thử `--threads 1`, `2`, `4`, `8` và số thread tối đa hợp lý của máy. Giá trị 0 để OpenMP runtime tự chọn. Không so sánh trực tiếp Colab 2 thread với Windows 20 thread như cùng một môi trường.
+
 ## Lưu kết quả Colab
 
 Benchmark trên `/content`, sau đó mới mount Drive và sao chép kết quả để I/O mạng không ảnh hưởng phép đo:

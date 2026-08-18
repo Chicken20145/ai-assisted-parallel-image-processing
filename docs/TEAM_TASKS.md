@@ -20,9 +20,9 @@
 ### Thứ tự thực hiện
 
 1. CPU tuần tự và test trường hợp biên — đã merge vào `main`.
-2. OpenMP Gaussian/Sobel theo pixel hoặc hàng với `schedule(static)`.
-3. OpenMP Histogram bằng histogram riêng từng thread rồi hợp nhất.
-4. Thử 1, 2, 4, 8 và số thread hợp lý; không hard-code theo máy.
+2. OpenMP Gaussian/Sobel theo hàng với `schedule(static)` — đã triển khai trên `feature/openmp-backend`.
+3. OpenMP Histogram bằng histogram riêng từng thread rồi hợp nhất — đã triển khai trên `feature/openmp-backend`.
+4. Test 1, 2, 4 thread đã đạt; C tiếp tục benchmark 1, 2, 4, 8 và số thread hợp lý, không hard-code theo máy.
 5. CUDA Basic: một thread/pixel, kiểm tra bounds và mọi CUDA error.
 6. Tách allocation, H2D, kernel, D2H và total bằng CUDA Event.
 7. CUDA Optimized: shared memory + halo cho convolution, shared histogram theo block.
@@ -107,7 +107,7 @@ C có quyền từ chối số liệu thiếu cấu hình máy, số lần chạ
 ### B dùng ngay
 
 - Đọc `include/image_types.hpp` và `include/processing_api.hpp`.
-- Tích hợp `Sequential`; giữ UI cho backend khác nhưng xử lý `BackendUnavailable`.
+- Tích hợp `Sequential` và `OpenMP`; hiển thị `threads_used` khi chạy OpenMP và xử lý `BackendUnavailable` cho CUDA.
 - Không phụ thuộc benchmark CLI để đọc ảnh thật vì tính năng đó chưa có.
 
 ### C dùng ngay
@@ -118,9 +118,8 @@ C có quyền từ chối số liệu thiếu cấu hình máy, số lần chạ
 
 ### A làm tiếp
 
-- Tạo branch mới từ `main` và triển khai ba thuật toán OpenMP trên API hiện tại.
-- Thêm test so sánh OpenMP với Sequential.
-- Sau khi OpenMP ổn định mới chuyển sang CUDA Basic.
+- Hoàn tất review/merge OpenMP và bàn giao API cho B/C.
+- Sau khi OpenMP merge, tạo branch mới từ `main` để triển khai CUDA Basic.
 
 ## Mốc dự án
 

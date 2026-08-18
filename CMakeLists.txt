@@ -15,8 +15,14 @@ add_library(image_processing_core
     src/cpu/gaussian.cpp
     src/cpu/sobel.cpp
     src/cpu/histogram_equalization.cpp
+    src/openmp/openmp_utils.cpp
+    src/openmp/grayscale_openmp.cpp
+    src/openmp/gaussian_openmp.cpp
+    src/openmp/sobel_openmp.cpp
+    src/openmp/histogram_equalization_openmp.cpp
 )
 target_include_directories(image_processing_core PUBLIC include)
+target_link_libraries(image_processing_core PUBLIC OpenMP::OpenMP_CXX)
 
 add_executable(parallel_image_processing
     src/main.cpp
@@ -36,4 +42,8 @@ if(BUILD_TESTING)
     add_executable(cpu_algorithm_tests tests/test_cpu_algorithms.cpp)
     target_link_libraries(cpu_algorithm_tests PRIVATE image_processing_core)
     add_test(NAME cpu_algorithm_tests COMMAND cpu_algorithm_tests)
+
+    add_executable(openmp_algorithm_tests tests/test_openmp_algorithms.cpp)
+    target_link_libraries(openmp_algorithm_tests PRIVATE image_processing_core)
+    add_test(NAME openmp_algorithm_tests COMMAND openmp_algorithm_tests)
 endif()

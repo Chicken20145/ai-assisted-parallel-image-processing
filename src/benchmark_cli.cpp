@@ -17,6 +17,7 @@ struct Options {
     int width = 512;
     int height = 512;
     int channels = 3;
+    int threads = 0;
     int warmup = 3;
     int runs = 20;
 };
@@ -61,6 +62,7 @@ void print_help() {
         << "  --algorithm gaussian_blur|sobel|histogram_equalization\n"
         << "  --backend sequential|openmp|cuda_basic|cuda_optimized\n"
         << "  --width N --height N --channels 1|3\n"
+        << "  --threads N (0 = OpenMP runtime tự chọn)\n"
         << "  --kernel-size 3|5|7 --sigma 0.1..10 --threshold 0..255\n"
         << "  --warmup N --runs N\n";
 }
@@ -82,6 +84,7 @@ Options parse_options(int argc, char** argv) {
         else if (argument == "--width") options.width = parse_int(value, argument);
         else if (argument == "--height") options.height = parse_int(value, argument);
         else if (argument == "--channels") options.channels = parse_int(value, argument);
+        else if (argument == "--threads") options.threads = parse_int(value, argument);
         else if (argument == "--kernel-size") options.params.kernel_size = parse_int(value, argument);
         else if (argument == "--sigma") options.params.sigma = parse_float(value, argument);
         else if (argument == "--threshold") options.params.threshold = parse_int(value, argument);
@@ -91,9 +94,10 @@ Options parse_options(int argc, char** argv) {
     }
     if (options.width <= 0 || options.height <= 0 ||
         (options.channels != 1 && options.channels != 3) ||
-        options.warmup < 0 || options.runs <= 0) {
-        throw std::invalid_argument("width/height/runs phải dương; channels là 1/3; warmup không âm.");
+        options.warmup < 0 || options.runs <= 0 || options.threads < 0) {
+        throw std::invalid_argument("width/height/runs phải dương; channels là 1/3; warmup/threads không âm.");
     }
+    options.params.thread_count = options.threads;
     return options;
 }
 
@@ -126,7 +130,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        std::cout << "algorithm,image_width,image_height,channels,backend,kernel_size,sigma,threshold,run,kernel_ms,total_ms\n";
+        std::cout << "algorithm,image_width,image_height,channels,backend,threads,kernel_size,sigma,threshold,run,kernel_ms,total_ms\n";
         std::cout << std::fixed << std::setprecision(6);
         for (int run = 1; run <= options.runs; ++run) {
             const auto result = pip::process(input, options.algorithm, options.params, options.backend);
@@ -136,7 +140,8 @@ int main(int argc, char** argv) {
             }
             std::cout << pip::to_string(options.algorithm) << ','
                       << options.width << ',' << options.height << ',' << options.channels << ','
-                      << pip::to_string(result.backend_used) << ',' << options.params.kernel_size << ','
+                      << pip::to_string(result.backend_used) << ',' << result.threads_used << ','
+                      << options.params.kernel_size << ','
                       << options.params.sigma << ',' << options.params.threshold << ',' << run << ','
                       << result.timing.kernel_ms << ',' << result.timing.total_ms << '\n';
         }

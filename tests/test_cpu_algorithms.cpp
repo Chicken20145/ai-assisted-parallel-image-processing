@@ -76,9 +76,9 @@ void test_dispatcher_and_errors() {
     check(!invalid.ok() && invalid.error == pip::ProcessingError::InvalidParameters,
           "Dispatcher phải trả lỗi tham số, không crash");
 
-    const auto unavailable = pip::process(image, pip::Algorithm::Sobel, {}, pip::Backend::OpenMP);
+    const auto unavailable = pip::process(image, pip::Algorithm::Sobel, {}, pip::Backend::CudaBasic);
     check(!unavailable.ok() && unavailable.error == pip::ProcessingError::BackendUnavailable,
-          "Dispatcher phải báo backend chưa sẵn sàng");
+          "Dispatcher phải báo backend CUDA chưa sẵn sàng");
 
     const auto success = pip::process(image, pip::Algorithm::HistogramEqualization, {}, pip::Backend::Sequential);
     check(success.ok() && success.output.is_valid() && success.timing.total_ms >= 0.0,

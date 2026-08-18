@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "cpu_algorithms.hpp"
+#include "openmp_algorithms.hpp"
 
 namespace pip {
 namespace {
@@ -29,29 +30,46 @@ ProcessingResult process(
         return make_error(backend, ProcessingError::InvalidImage,
                           "Ảnh phải có width/height dương, 1 hoặc 3 kênh và buffer liên tục đúng kích thước.");
     }
-    if (backend != Backend::Sequential) {
+    if (backend == Backend::CudaBasic || backend == Backend::CudaOptimized) {
         return make_error(backend, ProcessingError::BackendUnavailable,
-                          "Backend này chưa được triển khai trong mốc CPU tuần tự.");
+                          "Backend CUDA này chưa được triển khai.");
     }
 
     const auto started = std::chrono::steady_clock::now();
     try {
         Image output;
-        switch (algorithm) {
-            case Algorithm::GaussianBlur:
-                output = cpu::gaussian_blur(input, params.kernel_size, params.sigma);
-                break;
-            case Algorithm::Sobel:
-                output = cpu::sobel(input, params.threshold);
-                break;
-            case Algorithm::HistogramEqualization:
-                output = cpu::histogram_equalization(input);
-                break;
+        if (backend == Backend::Sequential) {
+            switch (algorithm) {
+                case Algorithm::GaussianBlur:
+                    output = cpu::gaussian_blur(input, params.kernel_size, params.sigma);
+                    break;
+                case Algorithm::Sobel:
+                    output = cpu::sobel(input, params.threshold);
+                    break;
+                case Algorithm::HistogramEqualization:
+                    output = cpu::histogram_equalization(input);
+                    break;
+            }
+        } else {
+            switch (algorithm) {
+                case Algorithm::GaussianBlur:
+                    output = openmp::gaussian_blur(input, params.kernel_size, params.sigma, params.thread_count);
+                    break;
+                case Algorithm::Sobel:
+                    output = openmp::sobel(input, params.threshold, params.thread_count);
+                    break;
+                case Algorithm::HistogramEqualization:
+                    output = openmp::histogram_equalization(input, params.thread_count);
+                    break;
+            }
         }
         const auto finished = std::chrono::steady_clock::now();
         ProcessingResult result;
         result.output = std::move(output);
         result.backend_used = backend;
+        result.threads_used = backend == Backend::OpenMP
+                                  ? openmp::effective_thread_count(params.thread_count)
+                                  : 1;
         result.timing.kernel_ms = std::chrono::duration<double, std::milli>(finished - started).count();
         result.timing.total_ms = result.timing.kernel_ms;
         return result;
