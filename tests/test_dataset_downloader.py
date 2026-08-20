@@ -45,7 +45,9 @@ class DatasetDownloaderTests(unittest.TestCase):
 
         self.source_archive = self.root / "source.tgz"
         create_archive(self.source_archive)
-        self.module.EXPECTED_SHA256 = self.module.sha256(self.source_archive)
+        _, logical_hash = self.module.dataset_sha256(self.source_archive)
+        self.module.EXPECTED_ARCHIVE_SHA256 = "0" * 64
+        self.module.EXPECTED_DATASET_SHA256 = logical_hash
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
@@ -60,7 +62,8 @@ class DatasetDownloaderTests(unittest.TestCase):
                 self.module.download_verified_archive()
 
         self.assertEqual(urlopen.call_count, 2)
-        self.assertEqual(self.module.sha256(self.module.ARCHIVE), self.module.EXPECTED_SHA256)
+        self.assertEqual(self.module.ARCHIVE.read_bytes(), valid_bytes)
+        self.assertEqual(self.module.verify_archive(self.module.ARCHIVE)[0], True)
         self.assertFalse(Path(f"{self.module.ARCHIVE}.part").exists())
 
     def test_incomplete_extraction_is_rebuilt_atomically(self) -> None:

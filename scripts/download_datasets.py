@@ -15,7 +15,8 @@ EXTERNAL_DIR = ROOT / "data" / "external"
 ARCHIVE = DOWNLOAD_DIR / "BSDS300-images.tgz"
 IMAGE_ROOT = EXTERNAL_DIR / "BSDS300" / "images"
 URL = "https://www2.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/segbench/BSDS300-images.tgz"
-EXPECTED_SHA256 = "A5F7D0E49FE135C75518A3543CED24470156FD69305AE77845DFF2A5138652B4"
+EXPECTED_ARCHIVE_SHA256 = "A5F7D0E49FE135C75518A3543CED24470156FD69305AE77845DFF2A5138652B4"
+EXPECTED_DATASET_SHA256 = "44584B06A9D2F22028D345F087F99D2428A5B6C410E8BEDE069770A60A8A24EF"
 MAX_DOWNLOAD_ATTEMPTS = 3
 
 
@@ -27,9 +28,44 @@ def sha256(path: Path) -> str:
     return digest.hexdigest().upper()
 
 
+def dataset_sha256(archive: Path) -> tuple[int, str]:
+    digest = hashlib.sha256()
+    with tarfile.open(archive, "r:*") as bundle:
+        images = sorted(
+            (member for member in bundle.getmembers() if member.isfile() and member.name.lower().endswith(".jpg")),
+            key=lambda member: member.name,
+        )
+        for member in images:
+            source = bundle.extractfile(member)
+            if source is None:
+                raise RuntimeError(f"Cannot read archive member: {member.name}")
+            digest.update(member.name.encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(source.read())
+    return len(images), digest.hexdigest().upper()
+
+
+def verify_archive(archive: Path) -> tuple[bool, str]:
+    archive_hash = sha256(archive)
+    if archive_hash == EXPECTED_ARCHIVE_SHA256:
+        return True, f"archive SHA-256 {archive_hash}"
+    try:
+        image_count, logical_hash = dataset_sha256(archive)
+    except (OSError, RuntimeError, tarfile.TarError) as error:
+        return False, f"invalid tar archive ({error}); archive SHA-256 {archive_hash}"
+    if image_count != 300:
+        return False, f"archive contains {image_count}/300 JPEG images; archive SHA-256 {archive_hash}"
+    if logical_hash != EXPECTED_DATASET_SHA256:
+        return False, (
+            f"dataset checksum mismatch: expected {EXPECTED_DATASET_SHA256}, got {logical_hash}; "
+            f"archive SHA-256 {archive_hash}"
+        )
+    return True, f"logical dataset SHA-256 {logical_hash} (archive SHA-256 {archive_hash})"
+
+
 def safe_extract(archive: Path, destination: Path) -> None:
     destination = destination.resolve()
-    with tarfile.open(archive, "r:gz") as bundle:
+    with tarfile.open(archive, "r:*") as bundle:
         for member in bundle.getmembers():
             target = (destination / member.name).resolve()
             if destination != target and destination not in target.parents:
@@ -44,10 +80,11 @@ def safe_extract(archive: Path, destination: Path) -> None:
 
 def download_verified_archive() -> None:
     if ARCHIVE.is_file():
-        actual_hash = sha256(ARCHIVE)
-        if actual_hash == EXPECTED_SHA256:
+        valid, detail = verify_archive(ARCHIVE)
+        if valid:
+            print(f"Verified cached BSDS300 using {detail}.")
             return
-        print(f"Removing invalid cached BSDS300 archive ({actual_hash}).")
+        print(f"Removing invalid cached BSDS300 archive: {detail}.")
         ARCHIVE.unlink()
 
     temporary = ARCHIVE.with_suffix(ARCHIVE.suffix + ".part")
@@ -60,11 +97,10 @@ def download_verified_archive() -> None:
             with urllib.request.urlopen(request, timeout=120) as response, temporary.open("wb") as output:
                 shutil.copyfileobj(response, output)
 
-            actual_hash = sha256(temporary)
-            if actual_hash != EXPECTED_SHA256:
-                raise RuntimeError(
-                    f"checksum mismatch: expected {EXPECTED_SHA256}, got {actual_hash}"
-                )
+            valid, detail = verify_archive(temporary)
+            if not valid:
+                raise RuntimeError(detail)
+            print(f"Verified downloaded BSDS300 using {detail}.")
             temporary.replace(ARCHIVE)
             return
         except Exception as error:  # Network and checksum failures share the retry path.
