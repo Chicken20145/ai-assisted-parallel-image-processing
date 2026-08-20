@@ -108,7 +108,7 @@ data/external/benchmark_suite/metadata.csv
 data/external/environment*.txt          Cấu hình từng máy/phiên
 ```
 
-Các thư mục trên không được commit. Nếu checksum sai, chỉ xóa `data/downloads/BSDS300-images.tgz` rồi chạy lại script tải.
+Các thư mục trên không được commit. Nếu mạng trả file lỗi hoặc tải dở, downloader tự xóa cache hỏng, retry ba lần và chỉ thay dataset đã giải nén sau khi xác minh đủ 300 ảnh. Không đổi checksum theo một file tải lỗi.
 
 ## Benchmark smoke test
 
@@ -172,5 +172,6 @@ Luôn lưu CSV cùng `environment_colab.txt`. Không gộp dữ liệu giữa ha
 - Không có `nvcc`: cài CUDA Toolkit hoặc chọn lại Colab GPU runtime.
 - `nvidia-smi` không nhận GPU: kiểm tra driver/runtime.
 - Colab 404: authorize private repository, chọn branch `main` rồi mở lại notebook.
+- Colab báo checksum BSDS300 sai: chạy lại cell setup; downloader tự xóa file lỗi và thử tối đa ba lần. Không sửa checksum theo hash lỗi. Nếu vẫn thất bại, kết nối lại runtime rồi chạy lại.
 - Runtime Colab reset: chạy lại notebook từ đầu; chỉ kết quả đã chép sang Drive được giữ lại.
 - Drive chậm: không dùng Drive làm thư mục benchmark trực tiếp.

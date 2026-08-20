@@ -7,6 +7,7 @@ set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 find_package(OpenMP REQUIRED)
+find_package(Python3 COMPONENTS Interpreter)
 
 add_library(image_processing_core
     src/common/error_metrics.cpp
@@ -46,4 +47,11 @@ if(BUILD_TESTING)
     add_executable(openmp_algorithm_tests tests/test_openmp_algorithms.cpp)
     target_link_libraries(openmp_algorithm_tests PRIVATE image_processing_core)
     add_test(NAME openmp_algorithm_tests COMMAND openmp_algorithm_tests)
+
+    if(Python3_Interpreter_FOUND)
+        add_test(
+            NAME dataset_downloader_tests
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/test_dataset_downloader.py
+        )
+    endif()
 endif()
