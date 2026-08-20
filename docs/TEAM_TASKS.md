@@ -20,8 +20,8 @@
 ### Thứ tự thực hiện
 
 1. CPU tuần tự và test trường hợp biên — đã merge vào `main`.
-2. OpenMP Gaussian/Sobel theo hàng với `schedule(static)` — đã triển khai trên `feature/openmp-backend`.
-3. OpenMP Histogram bằng histogram riêng từng thread rồi hợp nhất — đã triển khai trên `feature/openmp-backend`.
+2. OpenMP Gaussian/Sobel theo hàng với `schedule(static)` — đã merge vào `main` qua PR #4.
+3. OpenMP Histogram bằng histogram riêng từng thread rồi hợp nhất — đã merge vào `main` qua PR #4.
 4. Test 1, 2, 4 thread đã đạt; C tiếp tục benchmark 1, 2, 4, 8 và số thread hợp lý, không hard-code theo máy.
 5. CUDA Basic: một thread/pixel, kiểm tra bounds và mọi CUDA error.
 6. Tách allocation, H2D, kernel, D2H và total bằng CUDA Event.
@@ -118,8 +118,9 @@ C có quyền từ chối số liệu thiếu cấu hình máy, số lần chạ
 
 ### A làm tiếp
 
-- Hoàn tất review/merge OpenMP và bàn giao API cho B/C.
-- Sau khi OpenMP merge, tạo branch mới từ `main` để triển khai CUDA Basic.
+- OpenMP đã merge và đã bàn giao API cho B/C.
+- Tạo branch mới từ `main` để triển khai CUDA Basic.
+- B và C tiếp tục trên branch riêng; không cần chờ nhau để làm UI và benchmark CPU/OpenMP.
 
 ## Mốc dự án
 

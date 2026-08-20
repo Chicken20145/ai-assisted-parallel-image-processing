@@ -52,6 +52,7 @@ Các PR nền tảng đã merge:
 
 - [PR #1 – Setup Windows, Colab và dữ liệu](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/1) — đã merge.
 - [PR #2 – Core API và CPU tuần tự](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/2) — đã merge.
+- [PR #4 – Backend OpenMP](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/4) — đã merge và đạt test Windows/Colab.
 
 Mọi nhánh nhiệm vụ mới phải tạo từ `main` mới nhất.
 
@@ -162,8 +163,10 @@ BSDS300 được tải từ Computer Vision Group, UC Berkeley cho mục đích 
 
 - 300 ảnh JPEG: 200 train, 100 test.
 - SHA-256 archive: `A5F7D0E49FE135C75518A3543CED24470156FD69305AE77845DFF2A5138652B4`.
+- SHA-256 logic của tên và nội dung 300 JPEG: `44584B06A9D2F22028D345F087F99D2428A5B6C410E8BEDE069770A60A8A24EF`.
 - Nguồn: https://www2.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/segbench/
 - Vị trí cục bộ: `data/external/BSDS300/images/`.
+- Downloader chấp nhận lớp đóng gói tar/gzip khác nhau chỉ khi checksum archive đã biết hoặc checksum logic của đúng 300 ảnh khớp; file lạ vẫn bị từ chối.
 
 Script tạo 15 ảnh benchmark từ ba nhóm nội dung và năm kích thước: 256×256, 512×512, Full HD, 2K và 4K. Metadata và checksum từng ảnh nằm trong `data/external/benchmark_suite/metadata.csv`.
 
