@@ -170,8 +170,10 @@ Trình tự chạy lần đầu:
 1. Chọn **Runtime → Change runtime type → T4 GPU**, rồi **Connect**.
 2. Mở **Secrets** (biểu tượng chìa khóa), tạo `NGROK_AUTHTOKEN` từ [ngrok dashboard](https://dashboard.ngrok.com/get-started/your-authtoken) và bật quyền notebook. Chỉ tạo thêm `OPENAI_API_KEY` khi cần chế độ AI.
 3. Chạy từng cell từ trên xuống; không chuyển cell khi còn đang chạy hoặc có traceback đỏ.
-4. Xác nhận setup hoàn thành và test báo `100% tests passed`.
+4. Xác nhận cell in `ĐÃ ĐỒNG BỘ GITHUB` cùng branch/commit, setup hoàn thành và test báo `100% tests passed`.
 5. Chạy cell **Mở Streamlit UI trên Colab**, rồi bấm **Mở Pixel Lab Streamlit UI**.
+
+Giao diện hiển thị `Phiên bản Git đang chạy` ngay dưới tiêu đề. Mã này phải giống mã commit mà cell cập nhật vừa in; nếu khác, chạy lại cell cập nhật và cell mở Streamlit để khởi động lại server.
 
 Không chạy cell cũ chứa `serve_kernel_port_as_iframe`, không mở `localhost:8501` và không ghi token trực tiếp vào notebook.
 

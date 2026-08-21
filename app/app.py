@@ -51,6 +51,20 @@ def dataset_images() -> list[Path]:
     return discover_images(DATASET_DIR)
 
 
+def current_git_commit() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=ROOT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=5,
+        ).strip()
+    except (OSError, subprocess.SubprocessError):
+        return "không xác định"
+
+
 def discover_images(root: Path) -> list[Path]:
     if not root.is_dir():
         return []
@@ -519,6 +533,7 @@ def main() -> None:
 
     st.title("So sánh xử lý ảnh")
     st.caption("Xử lý một ảnh hoặc chạy benchmark toàn bộ BSDS300.")
+    st.caption(f"Phiên bản Git đang chạy: `{current_git_commit()}`")
 
     core = find_core_cli()
     available_images = dataset_images()

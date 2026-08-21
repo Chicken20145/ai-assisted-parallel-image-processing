@@ -169,6 +169,7 @@ def test_streamlit_app_renders_without_exception() -> None:
     app = AppTest.from_file(str(ROOT / "app" / "app.py")).run(timeout=15)
     assert not app.exception
     assert app.title[0].value == "So sánh xử lý ảnh"
+    assert any("Phiên bản Git đang chạy" in caption.value for caption in app.caption)
     assert [tab.label for tab in app.tabs] == ["Xử lý một ảnh", "Benchmark 300 ảnh"]
     assert any(selectbox.label == "Kích thước bộ lọc" for selectbox in app.selectbox)
     assert any(button.label == "Chạy kiểm tra 300 ảnh và xem chỉ số" for button in app.button)
