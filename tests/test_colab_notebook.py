@@ -12,6 +12,7 @@ def test_colab_notebook_contains_streamlit_proxy_launcher() -> None:
     source = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
 
     assert notebook["nbformat"] == 4
+    assert "GIT_REF = 'codex/fix-colab-streamlit-proxy'" in source
     assert "ngrok.connect(8501, bind_tls=True)" in source
     assert "userdata.get('NGROK_AUTHTOKEN')" in source
     assert "build-colab' / 'image_pipeline_cli" in source
