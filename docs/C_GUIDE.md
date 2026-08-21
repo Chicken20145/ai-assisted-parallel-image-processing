@@ -24,10 +24,7 @@ Runner cố ý từ chối nếu backend chạy thật khác backend yêu cầu.
 
 ## 3. Khi nào C bắt đầu
 
-C có thể smoke test ngay trên branch `feature/ui-manual-mode`. Để làm kết quả chính thức:
-
-1. Chờ PR #6 được review và merge.
-2. Tạo branch riêng từ `main` mới nhất.
+PR #6 đã merge. C tạo branch riêng từ `main` mới nhất trước khi làm kết quả chính thức:
 
 ```powershell
 git switch main
@@ -218,7 +215,7 @@ Không kết luận “backend X luôn nhanh nhất” từ một ảnh hoặc m
 
 ## 12. Checklist trước khi bàn giao
 
-- [ ] PR #6 đã merge và C tạo branch từ `main` mới nhất.
+- [ ] C đã pull `main` chứa merge commit PR #6 và tạo branch riêng.
 - [ ] Build Release, CTest và pytest đạt.
 - [ ] Đủ dataset/metadata/checksum.
 - [ ] Có environment đúng phiên.

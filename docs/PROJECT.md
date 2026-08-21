@@ -39,13 +39,13 @@ Ngoài phạm vi: video thời gian thực, MPI, đa GPU, nhận diện khuôn m
 | API chung và CPU Sequential | Hoàn thành trên `main` |
 | OpenMP cho ba thuật toán | Hoàn thành trên `main` |
 | CUDA Basic/Optimized | Chưa triển khai; A làm tiếp |
-| Manual UI, schema, prompt corpus | Hoàn thành trên Draft PR #6 |
-| Adapter UI → core C++ thật | Hoàn thành trên Draft PR #6 |
-| AI prompt parser Structured Outputs | Hoàn thành code trên Draft PR #6 |
-| Runner CSV/summary/biểu đồ cho C | Hoàn thành code trên Draft PR #6 |
-| Benchmark chính thức và báo cáo | C chạy sau khi PR #6 merge |
+| Manual UI, schema, prompt corpus | Hoàn thành trên `main` |
+| Adapter UI → core C++ thật | Hoàn thành trên `main` |
+| AI prompt parser Structured Outputs | Hoàn thành code trên `main` |
+| Runner CSV/summary/biểu đồ cho C | Hoàn thành code trên `main` |
+| Benchmark chính thức và báo cáo | C có thể bắt đầu từ `main` |
 
-PR đang dùng: [PR #6 – Manual UI, AI schema và C++ adapter](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/6). PR vẫn để Draft cho đến khi một thành viên khác review.
+[PR #6 – UI/AI adapter và benchmark](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/6) đã merge vào `main` tại commit `816ce98`.
 
 ## 4. Kiến trúc
 
@@ -176,6 +176,21 @@ Cập nhật code trong cùng runtime:
 
 Không lưu notebook vào GitHub nếu chỉ chạy thử. Không mount Drive trong lúc benchmark; chỉ sao chép kết quả sang Drive sau khi đo xong.
 
+### Mở UI trên Colab
+
+Không chạy `streamlit run` rồi mở `localhost:8501` vì localhost nằm trong máy ảo Colab. Trong notebook, chạy mục **Mở Streamlit UI trên Colab**. Cell sẽ:
+
+1. Kiểm tra `build-colab/image_pipeline_cli`.
+2. Chạy Streamlit nền và chờ health endpoint.
+3. Tạo liên kết **Mở Pixel Lab Streamlit UI** qua Colab kernel proxy.
+4. Dừng server cũ nếu cell được chạy lại.
+
+Nếu link không mở, xem log:
+
+```python
+print(open('/tmp/pixel_lab_streamlit.log', encoding='utf-8').read())
+```
+
 ## 9. Chạy ứng dụng B
 
 Build core trước:
@@ -233,7 +248,7 @@ Dataset, archive, build, API key và kết quả tạm không được commit.
 
 ### B – AI/UI
 
-- Code chức năng đã hoàn thiện trên PR #6.
+- Code chức năng đã merge vào `main` qua PR #6.
 - Việc thủ công còn lại: chạy prompt eval bằng key cá nhân, chụp ảnh demo và nhờ thành viên khác review PR.
 - Không gửi API key cho người khác và không lưu output chứa thông tin nhạy cảm.
 
@@ -258,7 +273,7 @@ git push -u origin feature/ten-nhiem-vu
 - Không push trực tiếp `main`.
 - Mỗi PR cần ít nhất một người khác review.
 - Không merge khi test đỏ, có conversation chưa resolve hoặc lẫn dataset/build/secret.
-- PR #6 phải merge trước khi C tạo branch báo cáo từ `main`.
+- PR #6 đã merge; C tạo branch báo cáo từ `main` mới nhất.
 
 ## 13. Tiêu chí hoàn thành dự án
 
