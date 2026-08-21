@@ -157,13 +157,23 @@ Build/test riêng:
 
 ## 8. Thiết lập Google Colab
 
-Repository private nên tài khoản phải là collaborator. Mở:
+Repository private nên tài khoản phải là collaborator. Trong lúc PR #7 chưa merge, mở notebook đã sửa trên branch:
 
 ```text
-https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/main/notebooks/colab_setup.ipynb
+https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/codex%2Ffix-colab-streamlit-proxy/notebooks/colab_setup.ipynb
 ```
 
-Nếu 404: **File → Open notebook → GitHub**, bật kho private, authorize GitHub, chọn branch và notebook. Sau đó chọn **Runtime → Change runtime type → GPU** rồi chạy từ trên xuống.
+Sau khi PR #7 merge, dùng notebook trên `main`. Nếu không mở được: **File → Open notebook → GitHub**, bật kho private, authorize GitHub, chọn branch `codex/fix-colab-streamlit-proxy` và `notebooks/colab_setup.ipynb`.
+
+Trình tự chạy lần đầu:
+
+1. Chọn **Runtime → Change runtime type → T4 GPU**, rồi **Connect**.
+2. Mở **Secrets** (biểu tượng chìa khóa), tạo `NGROK_AUTHTOKEN` từ [ngrok dashboard](https://dashboard.ngrok.com/get-started/your-authtoken) và bật quyền notebook. Chỉ tạo thêm `OPENAI_API_KEY` khi cần chế độ AI.
+3. Chạy từng cell từ trên xuống; không chuyển cell khi còn đang chạy hoặc có traceback đỏ.
+4. Xác nhận setup hoàn thành và test báo `100% tests passed`.
+5. Chạy cell **Mở Streamlit UI trên Colab**, rồi bấm **Mở Pixel Lab Streamlit UI**.
+
+Không chạy cell cũ chứa `serve_kernel_port_as_iframe`, không mở `localhost:8501` và không ghi token trực tiếp vào notebook.
 
 Cập nhật code trong cùng runtime:
 
@@ -187,7 +197,13 @@ Không chạy `streamlit run` rồi mở `localhost:8501` vì localhost nằm tr
 
 URL ngrok là URL công khai trong thời gian runtime còn hoạt động. Không chia sẻ URL và không tải dữ liệu nhạy cảm. Khi dùng xong, đóng tunnel bằng `ngrok.disconnect(ui_url)` hoặc ngắt runtime Colab.
 
-Nếu link không mở, xem log:
+Nếu không chạy được:
+
+- `FileNotFoundError`: chạy lại setup/build.
+- Trang trắng hoặc HTTP 404: notebook vẫn là bản cũ; mở lại branch `codex/fix-colab-streamlit-proxy` và kiểm tra cell có `ngrok.connect`.
+- Lỗi xác thực ngrok: kiểm tra secret đúng tên `NGROK_AUTHTOKEN`, token còn hiệu lực và quyền notebook đã bật.
+- Colab vừa kết nối lại runtime: chạy lại toàn bộ cell từ đầu.
+- Link được tạo nhưng ứng dụng lỗi: xem log:
 
 ```python
 print(open('/tmp/pixel_lab_streamlit.log', encoding='utf-8').read())
