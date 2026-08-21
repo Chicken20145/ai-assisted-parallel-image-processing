@@ -170,7 +170,13 @@ def test_streamlit_app_renders_without_exception() -> None:
     assert not app.exception
     assert app.title[0].value == "So sánh xử lý ảnh"
     assert [tab.label for tab in app.tabs] == ["Xử lý một ảnh", "Benchmark 300 ảnh"]
-    assert any(button.label == "Chạy benchmark 300 ảnh và xem chỉ số" for button in app.button)
+    assert any(selectbox.label == "Kích thước bộ lọc" for selectbox in app.selectbox)
+    assert any(button.label == "Chạy kiểm tra 300 ảnh và xem chỉ số" for button in app.button)
+
+    benchmark_profile = next(radio for radio in app.radio if radio.label == "Mục đích")
+    benchmark_profile.set_value("Đo hiệu năng để làm báo cáo").run(timeout=15)
+    assert not app.exception
+    assert any(button.label == "Chạy đo hiệu năng và xem chỉ số" for button in app.button)
 
 
 def test_ui_discovers_all_nested_bsds_images(tmp_path, monkeypatch) -> None:

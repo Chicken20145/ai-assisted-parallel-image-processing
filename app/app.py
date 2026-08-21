@@ -24,10 +24,14 @@ except ModuleNotFoundError:  # Cho phép chạy trực tiếp: streamlit run app
 
 ROOT = Path(__file__).resolve().parents[1]
 DATASET_DIR = ROOT / "data" / "external" / "BSDS300" / "images"
+BENCHMARK_SUITE_DIR = ROOT / "data" / "external" / "benchmark_suite"
 RESULT_DIR = ROOT / "benchmarks" / "results"
 RAW_RESULT = RESULT_DIR / "ui_raw_results.csv"
 SUMMARY_RESULT = RESULT_DIR / "ui_summary.csv"
 PLOT_DIR = RESULT_DIR / "ui_plots"
+OFFICIAL_RAW_RESULT = RESULT_DIR / "ui_official_raw_results.csv"
+OFFICIAL_SUMMARY_RESULT = RESULT_DIR / "ui_official_summary.csv"
+OFFICIAL_PLOT_DIR = RESULT_DIR / "ui_official_plots"
 
 ALGORITHM_LABELS = {
     "gaussian_blur": "Làm mờ Gaussian",
@@ -44,9 +48,13 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".ppm", ".pgm"}
 
 
 def dataset_images() -> list[Path]:
-    if not DATASET_DIR.is_dir():
+    return discover_images(DATASET_DIR)
+
+
+def discover_images(root: Path) -> list[Path]:
+    if not root.is_dir():
         return []
-    return sorted(path for path in DATASET_DIR.rglob("*") if path.suffix.lower() in IMAGE_EXTENSIONS)
+    return sorted(path for path in root.rglob("*") if path.suffix.lower() in IMAGE_EXTENSIONS)
 
 
 def image_to_png(image: Image.Image) -> bytes:
@@ -83,8 +91,12 @@ def operation_controls(prefix: str) -> dict:
 
     params: dict[str, float | int] = {}
     if algorithm == "gaussian_blur":
-        params["kernel_size"] = st.select_slider(
-            "Kích thước kernel", options=[3, 5, 7], value=5, key=f"{prefix}_kernel"
+        params["kernel_size"] = st.selectbox(
+            "Kích thước bộ lọc",
+            options=[3, 5, 7],
+            index=1,
+            format_func=lambda value: f"{value} × {value}",
+            key=f"{prefix}_kernel",
         )
         params["sigma"] = st.slider(
             "Sigma", 0.1, 10.0, 1.5, step=0.1, key=f"{prefix}_sigma"
@@ -272,17 +284,26 @@ def render_single_image(core_cli: Path | None, images: list[Path]) -> None:
             show_step_metrics(*result)
 
 
-def run_full_benchmark(core_cli: Path, thread_count: int) -> tuple[bool, str]:
+def run_full_benchmark(
+    core_cli: Path,
+    input_dir: Path,
+    thread_counts: list[int],
+    warmup: int,
+    runs: int,
+    raw_result: Path,
+    summary_result: Path,
+    plot_dir: Path,
+) -> tuple[bool, str]:
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
     benchmark_command = [
         sys.executable,
         str(ROOT / "scripts" / "run_benchmarks.py"),
-        "--input-dir", str(DATASET_DIR),
-        "--output", str(RAW_RESULT),
+        "--input-dir", str(input_dir),
+        "--output", str(raw_result),
         "--backends", "sequential", "openmp",
-        "--threads", str(thread_count),
-        "--warmup", "1",
-        "--runs", "3",
+        "--threads", ",".join(str(value) for value in thread_counts),
+        "--warmup", str(warmup),
+        "--runs", str(runs),
         "--core-cli", str(core_cli),
     ]
     benchmark = subprocess.run(
@@ -301,9 +322,9 @@ def run_full_benchmark(core_cli: Path, thread_count: int) -> tuple[bool, str]:
     analyze_command = [
         sys.executable,
         str(ROOT / "scripts" / "analyze_benchmarks.py"),
-        "--input", str(RAW_RESULT),
-        "--summary", str(SUMMARY_RESULT),
-        "--plots", str(PLOT_DIR),
+        "--input", str(raw_result),
+        "--summary", str(summary_result),
+        "--plots", str(plot_dir),
     ]
     analysis = subprocess.run(
         analyze_command,
@@ -320,28 +341,28 @@ def run_full_benchmark(core_cli: Path, thread_count: int) -> tuple[bool, str]:
     return True, benchmark.stdout
 
 
-def show_benchmark_results() -> None:
-    if not RAW_RESULT.is_file() or not SUMMARY_RESULT.is_file():
+def show_benchmark_results(raw_result: Path, summary_result: Path, label: str) -> None:
+    if not raw_result.is_file() or not summary_result.is_file():
         return
-    raw = pd.read_csv(RAW_RESULT)
-    summary = pd.read_csv(SUMMARY_RESULT)
+    raw = pd.read_csv(raw_result)
+    summary = pd.read_csv(summary_result)
     sequential = raw.loc[raw["backend"] == "sequential", "kernel_ms"]
     openmp = raw.loc[raw["backend"] == "openmp", "kernel_ms"]
     speedup = summary.loc[summary["backend"] == "openmp", "speedup"]
 
-    st.subheader("Kết quả")
+    st.subheader(f"Kết quả: {label}")
     first = st.columns(4)
     first[0].metric("Ảnh đã chạy", raw["image_name"].nunique())
     first[1].metric("Số lần đo", len(raw))
     first[2].metric("CPU tuần tự", f"{sequential.mean():.3f} ms")
-    first[3].metric("OpenMP", f"{openmp.mean():.3f} ms")
+    first[3].metric("OpenMP trung bình", f"{openmp.mean():.3f} ms")
     second = st.columns(3)
     second[0].metric("Tăng tốc trung bình", f"{speedup.mean():.2f} lần")
     second[1].metric("Sai số MAE lớn nhất", f"{raw['mae'].max():.3f}")
     second[2].metric("Thông lượng OpenMP", f"{raw.loc[raw['backend'] == 'openmp', 'throughput_mpix_s'].mean():.2f} MP/s")
 
     table = (
-        summary.groupby(["algorithm", "backend"], as_index=False)
+        summary.groupby(["algorithm", "backend", "threads"], as_index=False)
         .agg(
             kernel_ms=("kernel_ms_mean", "mean"),
             total_ms=("total_ms_mean", "mean"),
@@ -352,6 +373,7 @@ def show_benchmark_results() -> None:
             columns={
                 "algorithm": "Thuật toán",
                 "backend": "Backend",
+                "threads": "Số luồng",
                 "kernel_ms": "Kernel trung bình (ms)",
                 "total_ms": "Tổng trung bình (ms)",
                 "speedup": "Tăng tốc",
@@ -363,16 +385,16 @@ def show_benchmark_results() -> None:
     downloads = st.columns(2)
     downloads[0].download_button(
         "Tải kết quả chi tiết",
-        RAW_RESULT.read_bytes(),
-        file_name="benchmark_300_anh.csv",
+        raw_result.read_bytes(),
+        file_name=f"{raw_result.stem}.csv",
         mime="text/csv",
         use_container_width=True,
         key="download_raw_benchmark",
     )
     downloads[1].download_button(
         "Tải bảng tổng hợp",
-        SUMMARY_RESULT.read_bytes(),
-        file_name="benchmark_tong_hop.csv",
+        summary_result.read_bytes(),
+        file_name=f"{summary_result.stem}.csv",
         mime="text/csv",
         use_container_width=True,
         key="download_summary_benchmark",
@@ -380,45 +402,97 @@ def show_benchmark_results() -> None:
 
 
 def render_benchmark(core_cli: Path | None, images: list[Path]) -> None:
-    st.subheader("Benchmark 300 ảnh")
-    st.write("Nút bên dưới chạy cả 3 thuật toán bằng CPU tuần tự và OpenMP, sau đó tự tính chỉ số.")
+    st.subheader("Benchmark")
+    st.write("Chọn mục đích rồi bấm một nút. Hệ thống tự chạy và tính chỉ số.")
+
+    profile = st.radio(
+        "Mục đích",
+        ["Kiểm tra đủ 300 ảnh", "Đo hiệu năng để làm báo cáo"],
+        horizontal=True,
+        key="benchmark_profile",
+    )
+    cpu_count = max(1, os.cpu_count() or 1)
+    if profile == "Kiểm tra đủ 300 ảnh":
+        selected_images = images
+        expected_images = 300
+        thread_counts = [min(4, cpu_count)]
+        warmup = 1
+        runs = 3
+        raw_result, summary_result, plot_dir = RAW_RESULT, SUMMARY_RESULT, PLOT_DIR
+        result_label = "kiểm tra 300 ảnh"
+        description = "Chạy toàn bộ BSDS300 để kiểm tra độ đúng. Mỗi cấu hình đo 3 lần."
+    else:
+        selected_images = discover_images(BENCHMARK_SUITE_DIR)
+        expected_images = 15
+        thread_counts = [value for value in (1, 2, 4, 8) if value <= cpu_count]
+        warmup = 3
+        runs = 20
+        raw_result = OFFICIAL_RAW_RESULT
+        summary_result = OFFICIAL_SUMMARY_RESULT
+        plot_dir = OFFICIAL_PLOT_DIR
+        result_label = "đo hiệu năng báo cáo"
+        description = (
+            "Chạy 15 ảnh ở nhiều độ phân giải, warm-up 3 lần và đo 20 lần "
+            f"với OpenMP {', '.join(map(str, thread_counts))} luồng."
+        )
+    st.info(description)
+
     status = st.columns(3)
-    status[0].metric("Ảnh tìm thấy", f"{len(images)}/300")
+    status[0].metric("Ảnh tìm thấy", f"{len(selected_images)}/{expected_images}")
     status[1].metric("Thuật toán", 3)
     status[2].metric("Backend", 2)
 
-    if images:
-        with st.expander(f"Danh sách {len(images)} ảnh BSDS300"):
+    if selected_images:
+        with st.expander(f"Danh sách {len(selected_images)} ảnh"):
             st.dataframe(
-                pd.DataFrame({"STT": range(1, len(images) + 1), "Tên ảnh": [p.name for p in images]}),
+                pd.DataFrame(
+                    {
+                        "STT": range(1, len(selected_images) + 1),
+                        "Tên ảnh": [path.name for path in selected_images],
+                    }
+                ),
                 use_container_width=True,
                 hide_index=True,
                 height=320,
             )
 
-    ready = len(images) == 300 and core_cli is not None
-    if len(images) != 300:
-        st.error("Chưa đủ 300 ảnh. Hãy chạy cell setup Colab trước.")
+    ready = len(selected_images) == expected_images and core_cli is not None
+    if len(selected_images) != expected_images:
+        st.error(f"Chưa đủ {expected_images} ảnh. Hãy chạy cell setup Colab trước.")
     if core_cli is None:
         st.error("Chưa tìm thấy core C++. Hãy chạy cell build trước.")
 
-    thread_count = max(1, min(4, os.cpu_count() or 1))
+    button_label = (
+        "Chạy kiểm tra 300 ảnh và xem chỉ số"
+        if profile == "Kiểm tra đủ 300 ảnh"
+        else "Chạy đo hiệu năng và xem chỉ số"
+    )
     if st.button(
-        "Chạy benchmark 300 ảnh và xem chỉ số",
+        button_label,
         type="primary",
         use_container_width=True,
         key="run_full_benchmark",
         disabled=not ready,
     ):
-        with st.spinner("Đang chạy 300 ảnh. Không đóng Colab hoặc ngắt runtime..."):
-            ok, detail = run_full_benchmark(core_cli, thread_count)
+        with st.spinner("Đang chạy. Không đóng Colab hoặc ngắt runtime..."):
+            ok, detail = run_full_benchmark(
+                core_cli,
+                BENCHMARK_SUITE_DIR if profile != "Kiểm tra đủ 300 ảnh" else DATASET_DIR,
+                thread_counts,
+                warmup,
+                runs,
+                raw_result,
+                summary_result,
+                plot_dir,
+            )
         if ok:
             st.success("Đã chạy xong benchmark.")
         else:
             st.error("Benchmark không chạy được.")
             st.code(detail[-5000:] if detail else "Không có log.")
 
-    show_benchmark_results()
+    st.caption("CUDA chưa được tính vì core CUDA chưa hoàn thành.")
+    show_benchmark_results(raw_result, summary_result, result_label)
 
 
 def main() -> None:

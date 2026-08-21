@@ -221,7 +221,7 @@ Build core trước:
 UI có hai tab:
 
 1. **Xử lý một ảnh**: tải ảnh riêng hoặc chọn trực tiếp một trong 300 ảnh BSDS300; chọn một bước, nhiều bước hoặc nhập yêu cầu AI; bấm **Chạy và xem chỉ số**.
-2. **Benchmark 300 ảnh**: tự kiểm tra đủ `300/300`, chạy ba thuật toán trên Sequential/OpenMP bằng một nút và hiện thời gian, speedup, throughput, MAE cùng file CSV tải về.
+2. **Benchmark**: chọn kiểm tra đủ 300 ảnh hoặc đo hiệu năng báo cáo; bấm một nút để chạy Sequential/OpenMP và hiện thời gian, speedup, throughput, MAE cùng file CSV tải về.
 
 Ba cách tạo yêu cầu xử lý ảnh:
 
@@ -229,7 +229,9 @@ Ba cách tạo yêu cầu xử lý ảnh:
 2. Pipeline thủ công tối đa năm bước.
 3. AI từ mô tả tiếng Việt.
 
-Nút benchmark trong UI dùng warm-up 1 và 3 lần đo để kiểm tra nhanh toàn bộ 300 ảnh. Số liệu chính thức trong báo cáo vẫn phải chạy theo cấu hình lặp tại [`C_GUIDE.md`](C_GUIDE.md).
+- **Kiểm tra đủ 300 ảnh**: warm-up 1, đo 3 lần; dùng để kiểm tra độ đúng và độ phủ.
+- **Đo hiệu năng để làm báo cáo**: 15 ảnh nhiều độ phân giải, warm-up 3, đo 20 lần và thử các mức luồng phù hợp với CPU; khớp quy trình tại [`C_GUIDE.md`](C_GUIDE.md).
+- CUDA chỉ được thêm sau khi core CUDA thật hoàn thành; UI không ghi số liệu fallback dưới nhãn CUDA.
 
 Thiết lập OpenAI trên Windows chỉ trong phiên terminal:
 
