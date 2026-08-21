@@ -182,7 +182,7 @@ Không chạy `streamlit run` rồi mở `localhost:8501` vì localhost nằm tr
 
 1. Kiểm tra `build-colab/image_pipeline_cli`.
 2. Chạy Streamlit nền và chờ health endpoint.
-3. Tạo liên kết **Mở Pixel Lab Streamlit UI** qua Colab kernel proxy.
+3. Nhúng Pixel Lab trực tiếp trong notebook bằng Colab kernel proxy; không mở tab proxy mới vì Chrome có thể trả HTTP 404.
 4. Dừng server cũ nếu cell được chạy lại.
 
 Nếu link không mở, xem log:
