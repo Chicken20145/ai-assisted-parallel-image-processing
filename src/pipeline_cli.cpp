@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "processing_api.hpp"
 
@@ -18,6 +19,8 @@ struct Options {
     pip::Algorithm algorithm = pip::Algorithm::GaussianBlur;
     pip::Backend backend = pip::Backend::Sequential;
     pip::ProcessingParams params;
+    int warmup = 0;
+    int runs = 1;
 };
 
 std::string json_escape(std::string_view value) {
@@ -95,6 +98,8 @@ Options parse_options(int argc, char** argv) {
         else if (argument == "--sigma") options.params.sigma = parse_float(value, argument);
         else if (argument == "--threshold") options.params.threshold = parse_int(value, argument);
         else if (argument == "--threads") options.params.thread_count = parse_int(value, argument);
+        else if (argument == "--warmup") options.warmup = parse_int(value, argument);
+        else if (argument == "--runs") options.runs = parse_int(value, argument);
         else throw std::invalid_argument("Unknown option: " + std::string(argument));
     }
     if (options.input_path.empty() || options.output_path.empty()) {
@@ -102,6 +107,9 @@ Options parse_options(int argc, char** argv) {
     }
     if (options.params.thread_count < 0 || options.params.thread_count > 1024) {
         throw std::invalid_argument("threads must be in range 0..1024");
+    }
+    if (options.warmup < 0 || options.runs <= 0 || options.runs > 10000) {
+        throw std::invalid_argument("warmup must be non-negative and runs must be in range 1..10000");
     }
     return options;
 }
@@ -170,17 +178,63 @@ void print_result(const pip::ProcessingResult& result) {
               << "\"total_ms\":" << result.timing.total_ms << "}}\n";
 }
 
+void print_benchmark_result(
+    const pip::ProcessingResult& result,
+    const std::vector<pip::Timing>& timings) {
+    std::cout << std::fixed << std::setprecision(6)
+              << "{\"ok\":true"
+              << ",\"error_code\":\"none\""
+              << ",\"error_message\":\"\""
+              << ",\"backend_used\":\"" << pip::to_string(result.backend_used) << '"'
+              << ",\"threads_used\":" << result.threads_used
+              << ",\"timings\":[";
+    for (std::size_t index = 0; index < timings.size(); ++index) {
+        if (index != 0) std::cout << ',';
+        const auto& timing = timings[index];
+        std::cout << '{'
+                  << "\"allocation_ms\":" << timing.allocation_ms << ','
+                  << "\"h2d_ms\":" << timing.h2d_ms << ','
+                  << "\"kernel_ms\":" << timing.kernel_ms << ','
+                  << "\"d2h_ms\":" << timing.d2h_ms << ','
+                  << "\"total_ms\":" << timing.total_ms << '}';
+    }
+    std::cout << "]}\n";
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     try {
         const Options options = parse_options(argc, argv);
         const pip::Image input = read_pnm(options.input_path);
-        const pip::ProcessingResult result = pip::process(
-            input, options.algorithm, options.params, options.backend);
-        if (result.ok()) write_pnm(options.output_path, result.output);
-        print_result(result);
-        return result.ok() ? EXIT_SUCCESS : 2;
+        for (int run = 0; run < options.warmup; ++run) {
+            const auto warmup_result = pip::process(
+                input, options.algorithm, options.params, options.backend);
+            if (!warmup_result.ok()) {
+                print_result(warmup_result);
+                return 2;
+            }
+        }
+
+        std::vector<pip::Timing> timings;
+        timings.reserve(static_cast<std::size_t>(options.runs));
+        pip::ProcessingResult last_result;
+        for (int run = 0; run < options.runs; ++run) {
+            auto result = pip::process(input, options.algorithm, options.params, options.backend);
+            if (!result.ok()) {
+                print_result(result);
+                return 2;
+            }
+            timings.push_back(result.timing);
+            last_result = std::move(result);
+        }
+        write_pnm(options.output_path, last_result.output);
+        if (options.warmup == 0 && options.runs == 1) {
+            print_result(last_result);
+        } else {
+            print_benchmark_result(last_result, timings);
+        }
+        return EXIT_SUCCESS;
     } catch (const std::exception& error) {
         pip::ProcessingResult result;
         result.error = pip::ProcessingError::InternalError;

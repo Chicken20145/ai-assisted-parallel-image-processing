@@ -1,187 +1,271 @@
-# Tổng quan dự án
+# Dự án AI-Assisted Parallel Image Processing
 
-## Mục tiêu
+Đây là note tổng hợp duy nhất về mục tiêu, kiến trúc, trạng thái, thiết lập và cách phối hợp dự án. Quy trình benchmark chi tiết của thành viên C nằm riêng tại [`C_GUIDE.md`](C_GUIDE.md).
 
-Xây dựng ứng dụng xử lý ảnh song song chính xác, đo lường được và giải thích được khi nào CPU tuần tự, OpenMP hoặc CUDA phù hợp. Lớp AI chuyển yêu cầu tiếng Việt thành pipeline JSON hợp lệ; AI không trực tiếp tính toán ảnh và không tự tạo số liệu benchmark.
+## 1. Mục tiêu
 
-## Phạm vi cốt lõi
+Xây dựng ứng dụng xử lý ảnh có thể:
 
-Dự án chỉ triển khai ba thuật toán:
+1. Nhận yêu cầu thủ công hoặc câu tiếng Việt.
+2. Chuyển yêu cầu AI thành pipeline JSON đã khóa schema.
+3. Chạy cùng thuật toán trên CPU tuần tự, OpenMP và CUDA.
+4. Đo thời gian, kiểm tra độ chính xác và giải thích backend nào phù hợp.
+5. Tái lập được trên Windows và Google Colab.
 
-1. Gaussian Blur.
-2. Sobel Edge Detection.
-3. Histogram Equalization.
+AI chỉ tạo pipeline. Toàn bộ xử lý pixel và timing chính thức phải đến từ core C++/CUDA; AI không được tự tính ảnh hoặc tạo số liệu benchmark.
 
-Mỗi thuật toán có bốn backend:
+## 2. Phạm vi cố định
 
-1. CPU tuần tự làm kết quả tham chiếu.
-2. OpenMP.
-3. CUDA cơ bản.
-4. CUDA tối ưu.
+Ba thuật toán:
 
-Ngoài phạm vi hiện tại: video thời gian thực, MPI, đa GPU, huấn luyện mô hình, nhận dạng vật thể/khuôn mặt, chẩn đoán y tế và triển khai cloud nhiều người dùng.
+- Gaussian Blur: `kernel_size` 3/5/7, `sigma` 0.1–10.
+- Sobel Edge Detection: `threshold` 0–255.
+- Histogram Equalization: không có tham số riêng.
 
-## Thành phần của repository
+Bốn backend:
+
+- `sequential`: CPU tuần tự, kết quả tham chiếu.
+- `openmp`: CPU đa luồng.
+- `cuda_basic`: một CUDA thread/pixel.
+- `cuda_optimized`: shared memory/halo hoặc histogram theo block.
+
+Ngoài phạm vi: video thời gian thực, MPI, đa GPU, nhận diện khuôn mặt/vật thể, huấn luyện model, chỉnh màu kiểu mạng xã hội, chẩn đoán y tế và triển khai cloud nhiều người dùng.
+
+## 3. Trạng thái hiện tại
+
+| Hạng mục | Trạng thái |
+|---|---|
+| Setup Windows/Colab, dataset BSDS300, 15 ảnh benchmark | Hoàn thành trên `main` |
+| API chung và CPU Sequential | Hoàn thành trên `main` |
+| OpenMP cho ba thuật toán | Hoàn thành trên `main` |
+| CUDA Basic/Optimized | Chưa triển khai; A làm tiếp |
+| Manual UI, schema, prompt corpus | Hoàn thành trên Draft PR #6 |
+| Adapter UI → core C++ thật | Hoàn thành trên Draft PR #6 |
+| AI prompt parser Structured Outputs | Hoàn thành code trên Draft PR #6 |
+| Runner CSV/summary/biểu đồ cho C | Hoàn thành code trên Draft PR #6 |
+| Benchmark chính thức và báo cáo | C chạy sau khi PR #6 merge |
+
+PR đang dùng: [PR #6 – Manual UI, AI schema và C++ adapter](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/6). PR vẫn để Draft cho đến khi một thành viên khác review.
+
+## 4. Kiến trúc
 
 ```text
-app/            Giao diện và adapter AI
-benchmarks/     CLI, cấu hình và kết quả benchmark
-data/           Ảnh mẫu và dữ liệu ngoài Git
-docs/           Ba tài liệu chung của dự án
-include/        API C++ công khai
-notebooks/      Notebook Google Colab
-scripts/        Setup, build, test và chuẩn bị dữ liệu
-src/common/     Dispatcher và error metrics
-src/cpu/        CPU tuần tự
-src/openmp/     OpenMP
-src/cuda/       CUDA
-tests/          Kiểm thử tính đúng đắn
+Người dùng
+   ├─ Manual mode ───────────────┐
+   └─ AI prompt                  │
+        └─ OpenAI Responses API  │
+             └─ Structured Output (Pydantic)
+                                ↓
+                     Pipeline validation lần hai
+                                ↓
+                    app/pipeline_adapter.py
+                                ↓
+                    app/core_adapter.py
+                                ↓ PPM/PGM lossless
+                    image_pipeline_cli (C++)
+                                ↓
+                        pip::process()
+                  ┌─────────────┼─────────────┐
+              Sequential      OpenMP        CUDA
 ```
 
-## Trạng thái hiện tại
+Quy tắc quan trọng:
 
-- Nhánh nền ổn định cho cả nhóm: `main`.
-- Đã có setup Windows và Google Colab có thể tái lập.
-- Đã tải BSDS300 và tạo 15 ảnh benchmark cục bộ.
-- Đã có API chung, CPU tuần tự, OpenMP, CTest, MAE/MSE và CLI benchmark tổng hợp.
-- Đã triển khai grayscale, Gaussian Blur, Sobel và Histogram Equalization tuần tự.
-- Đã có manual UI Streamlit, JSON schema, prompt corpus và adapter gọi core C++ thật qua `image_pipeline_cli`.
-- UI chạy được Sequential/OpenMP trên ảnh tải lên, hiển thị backend thực tế, số luồng, timing, fallback và tải ảnh kết quả.
-- Chưa triển khai CUDA Basic, CUDA Optimized, AI prompt parser và đọc ảnh thật trong benchmark CLI.
-- Backend chưa triển khai trả `BackendUnavailable`; đây là hành vi có chủ ý.
+- Output AI luôn bị Pydantic kiểm tra lại trước khi chạy.
+- Python không sao chép thuật toán C++ trong đường chạy thật.
+- `image_pipeline_cli` đọc ảnh P5/P6, gọi duy nhất `pip::process()` và trả JSON.
+- CUDA chưa có trả `BackendUnavailable`; UI fallback CUDA → OpenMP → Sequential và hiển thị backend thực tế.
+- Benchmark chính thức từ chối fallback để không gắn nhãn sai số liệu.
 
-Các PR nền tảng đã merge:
+## 5. Cấu trúc repository
 
-- [PR #1 – Setup Windows, Colab và dữ liệu](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/1) — đã merge.
-- [PR #2 – Core API và CPU tuần tự](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/2) — đã merge.
-- [PR #4 – Backend OpenMP](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/4) — đã merge và đạt test Windows/Colab.
-
-Mọi nhánh nhiệm vụ mới phải tạo từ `main` mới nhất.
-
-## Hợp đồng ảnh
-
-```cpp
-struct Image {
-    int width;
-    int height;
-    int channels;
-    std::vector<std::uint8_t> pixels;
-};
+```text
+app/          Streamlit UI, AI parser, schema và adapter C++
+include/      API C++ công khai
+src/cpu/      Thuật toán CPU tuần tự
+src/openmp/   Thuật toán OpenMP
+src/cuda/     CUDA probe và backend CUDA tương lai
+scripts/      Setup, build, dataset, benchmark và phân tích
+tests/        CTest, pytest unit/integration
+data/         Dataset cục bộ, không commit
+benchmarks/   Kết quả benchmark cục bộ, không commit mặc định
+notebooks/    Notebook setup Google Colab
+docs/         PROJECT.md và C_GUIDE.md
 ```
 
-- Hỗ trợ grayscale một kênh và RGB ba kênh.
-- RGB xen kẽ dạng `RGBRGB...`.
-- Không có padding giữa các hàng.
-- Buffer phải có đúng `width * height * channels` phần tử.
-- Các hàm không sửa ảnh đầu vào và không đọc/ghi file trực tiếp.
-
-## API xử lý chung
+## 6. Hợp đồng core
 
 ```cpp
 pip::ProcessingResult result = pip::process(
     input,
     pip::Algorithm::GaussianBlur,
     params,
-    pip::Backend::Sequential);
+    pip::Backend::OpenMP);
 ```
 
-Mapping dùng giữa JSON và C++:
+Ảnh là buffer liên tục, RGB xen kẽ hoặc grayscale:
 
-| JSON | C++ |
-|---|---|
-| `gaussian_blur` | `Algorithm::GaussianBlur` |
-| `sobel` | `Algorithm::Sobel` |
-| `histogram_equalization` | `Algorithm::HistogramEqualization` |
-| `sequential` | `Backend::Sequential` |
-| `openmp` | `Backend::OpenMP` |
-| `cuda_basic` | `Backend::CudaBasic` |
-| `cuda_optimized` | `Backend::CudaOptimized` |
+```cpp
+struct Image {
+    int width;
+    int height;
+    int channels; // 1 hoặc 3
+    std::vector<std::uint8_t> pixels;
+};
+```
 
-Tham số:
+`ProcessingResult` cung cấp:
 
-- Gaussian: `kernel_size` là 3, 5 hoặc 7; `sigma` từ 0.1 đến 10.0.
-- Sobel: `threshold` từ 0 đến 255.
-- OpenMP: `thread_count` từ 1 đến 1024; giá trị 0 để runtime tự chọn.
-- Sobel threshold 0 trả gradient 0–255; threshold lớn hơn 0 trả ảnh nhị phân.
+- `output`: ảnh kết quả.
+- `backend_used`: backend chạy thật.
+- `threads_used`: số luồng OpenMP thực tế được cấu hình.
+- `timing`: allocation, H2D, kernel, D2H và total.
+- `error`: `None`, `InvalidImage`, `InvalidParameters`, `BackendUnavailable`, `InternalError`.
 
-Đầu ra:
+Gaussian giữ số kênh đầu vào. Sobel và Histogram Equalization trả grayscale một kênh. Sequential/OpenMP hiện phải khớp tuyệt đối: MAE/MSE/max error đều bằng 0.
 
-| Thuật toán | Số kênh đầu ra |
-|---|---|
-| Gaussian Blur | Giữ nguyên đầu vào |
-| Sobel | Grayscale một kênh |
-| Histogram Equalization | Grayscale một kênh |
+## 7. Thiết lập Windows
 
-`ProcessingResult::threads_used` cho biết số thread được cấu hình cho lần chạy. Mã lỗi chung: `None`, `InvalidImage`, `InvalidParameters`, `BackendUnavailable`, `InternalError`. B phải kiểm tra `result.ok()` trước khi đọc ảnh đầu ra.
+Yêu cầu: Windows 10/11, Visual Studio C++ workload, CMake tools, Windows SDK, CUDA Toolkit/driver, Python 3.10+, Git.
 
-UI không sao chép thuật toán bằng Python. `app/core_adapter.py` chuyển ảnh lossless sang PPM/PGM tạm, gọi `image_pipeline_cli`; executable này đọc ảnh rồi gọi duy nhất API `pip::process()`. Khi CUDA trả `BackendUnavailable`, adapter thử OpenMP rồi Sequential và luôn hiển thị backend thực tế. Mock chỉ còn phục vụ unit test đối chiếu, không nằm trong đường chạy mặc định của UI.
+```powershell
+git clone https://github.com/Chicken20145/ai-assisted-parallel-image-processing.git
+Set-Location .\ai-assisted-parallel-image-processing
+git switch main
+git pull --ff-only origin main
 
-Timing chung gồm `allocation_ms`, `h2d_ms`, `kernel_ms`, `d2h_ms`, `total_ms`. CPU tuần tự hiện dùng `kernel_ms == total_ms`; CUDA phải tách riêng các giai đoạn.
+.\scripts\setup_windows.ps1
+.\scripts\download_datasets.ps1
+.\.venv\Scripts\python.exe .\scripts\prepare_benchmark_data.py
+.\scripts\check_environment.ps1
+.\scripts\test_windows.ps1 -BuildFirst
+```
 
-## OpenMP
+Nếu PowerShell chặn script:
 
-- Gaussian và Sobel song song hóa vòng lặp theo hàng với `schedule(static)`.
-- Chuyển RGB sang grayscale cũng được song song hóa khi backend là OpenMP.
-- Histogram Equalization dùng histogram 256 mức riêng cho từng thread, sau đó hợp nhất.
-- Ánh xạ CDF được song song hóa theo pixel.
-- Backend OpenMP giữ nguyên công thức, cách làm tròn, quy tắc biên và kiểu đầu ra của Sequential.
-- Test yêu cầu kết quả khớp tuyệt đối: MAE = 0, MSE = 0, max absolute error = 0.
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
 
-## Quy tắc tính toán
+Build/test riêng:
 
-### Grayscale
+```powershell
+.\scripts\build_windows.ps1 -Configuration Release
+.\scripts\test_windows.ps1
+.\.venv\Scripts\python.exe -m pytest tests -q
+```
+
+## 8. Thiết lập Google Colab
+
+Repository private nên tài khoản phải là collaborator. Mở:
 
 ```text
-gray = (77R + 150G + 29B + 128) >> 8
+https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/main/notebooks/colab_setup.ipynb
 ```
 
-### Gaussian Blur
+Nếu 404: **File → Open notebook → GitHub**, bật kho private, authorize GitHub, chọn branch và notebook. Sau đó chọn **Runtime → Change runtime type → GPU** rồi chạy từ trên xuống.
 
-```text
-G(x,y) = exp(-(x²+y²)/(2σ²))
+Cập nhật code trong cùng runtime:
+
+```bash
+%cd /content/ai-assisted-parallel-image-processing
+!git pull --ff-only origin main
+!bash scripts/build_colab.sh
+!bash scripts/test_colab.sh
 ```
 
-Kernel được chuẩn hóa để tổng bằng 1, tính độc lập từng kênh và dùng biên replicate/clamp.
+Không lưu notebook vào GitHub nếu chỉ chạy thử. Không mount Drive trong lúc benchmark; chỉ sao chép kết quả sang Drive sau khi đo xong.
 
-### Sobel
+## 9. Chạy ứng dụng B
 
-```text
-Gx = -1  0  1      Gy = -1 -2 -1
-     -2  0  2            0  0  0
-     -1  0  1            1  2  1
+Build core trước:
+
+```powershell
+.\scripts\build_windows.ps1 -Configuration Release
+.\.venv\Scripts\python.exe -m streamlit run .\app\app.py
 ```
 
-Độ lớn gradient là `clamp(round(sqrt(Gx² + Gy²)), 0, 255)`.
+UI có ba chế độ:
 
-### Histogram Equalization
+1. Một thuật toán.
+2. Pipeline thủ công tối đa năm bước.
+3. AI từ mô tả tiếng Việt.
 
-```text
-output(v) = round((cdf(v) - cdf_min) * 255 / (N - cdf_min))
+Thiết lập OpenAI trên Windows chỉ trong phiên terminal:
+
+```powershell
+$env:OPENAI_API_KEY = 'key-cua-ban'
+$env:OPENAI_MODEL = 'gpt-5.6-luna' # tùy chọn
 ```
 
-Ảnh chỉ có một mức xám được giữ nguyên để tránh chia cho 0.
+Google Colab: tạo Secret `OPENAI_API_KEY`; code tự đọc Colab Secrets. Không commit `.env`, API key hoặc in key ra output. Khi không có key/API lỗi, manual mode vẫn hoạt động.
 
-## Dữ liệu
+AI parser dùng Responses API + Pydantic Structured Outputs, sau đó validate lần hai bằng schema nội bộ. Tài liệu kỹ thuật tham khảo: [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
 
-BSDS300 được tải từ Computer Vision Group, UC Berkeley cho mục đích nghiên cứu/giáo dục phi thương mại:
+Sau khi có API key, B chạy bộ đánh giá 26 prompt (lệnh này gọi API và có thể phát sinh chi phí):
 
-- 300 ảnh JPEG: 200 train, 100 test.
-- SHA-256 archive: `A5F7D0E49FE135C75518A3543CED24470156FD69305AE77845DFF2A5138652B4`.
-- SHA-256 logic của tên và nội dung 300 JPEG: `44584B06A9D2F22028D345F087F99D2428A5B6C410E8BEDE069770A60A8A24EF`.
-- Nguồn: https://www2.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/segbench/
-- Vị trí cục bộ: `data/external/BSDS300/images/`.
-- Downloader chấp nhận lớp đóng gói tar/gzip khác nhau chỉ khi checksum archive đã biết hoặc checksum logic của đúng 300 ảnh khớp; file lạ vẫn bị từ chối.
+```powershell
+.\.venv\Scripts\python.exe .\scripts\evaluate_ai_prompts.py `
+  --model gpt-5.6-luna `
+  --output .\benchmarks\results\ai_prompt_evaluation.csv
+```
 
-Script tạo 15 ảnh benchmark từ ba nhóm nội dung và năm kích thước: 256×256, 512×512, Full HD, 2K và 4K. Metadata và checksum từng ảnh nằm trong `data/external/benchmark_suite/metadata.csv`.
+Có thể dùng `--limit 1` để kiểm tra key/model trước khi chạy đủ bộ.
 
-DIV2K và LOL mới được khảo sát, chưa dùng trong quy trình chính thức do dung lượng hoặc điều khoản phân phối chưa đủ rõ.
+## 10. Dataset
 
-## Tiêu chí hoàn thành
+Nguồn chính: BSDS300 của UC Berkeley, 300 JPEG dùng cho nghiên cứu/giáo dục phi thương mại.
 
-- Cả ba thuật toán chạy đúng với ảnh thường và ảnh biên.
-- OpenMP/CUDA được so với CPU bằng MAE, MSE và max absolute error.
-- Benchmark Release có warm-up 3–5 lần và ít nhất 20 lần đo.
-- CUDA tách H2D, kernel, D2H và end-to-end.
-- Báo cáo có mean, standard deviation, speedup, efficiency và throughput.
-- Giao diện hiển thị ảnh, pipeline hợp lệ, backend thực tế và timing.
-- Clone sạch có thể setup, build và test theo tài liệu.
+- Archive SHA-256 đã biết: `A5F7D0E49FE135C75518A3543CED24470156FD69305AE77845DFF2A5138652B4`.
+- Logical checksum 300 ảnh: `44584B06A9D2F22028D345F087F99D2428A5B6C410E8BEDE069770A60A8A24EF`.
+- Bộ benchmark: ba nhóm nội dung × năm độ phân giải = 15 ảnh.
+- Metadata: `data/external/benchmark_suite/metadata.csv`.
+
+Dataset, archive, build, API key và kết quả tạm không được commit.
+
+## 11. Phân công còn lại
+
+### A – Core
+
+- Triển khai CUDA Basic và CUDA Optimized.
+- Tách allocation/H2D/kernel/D2H/total bằng CUDA Event.
+- So sánh CUDA với Sequential bằng error metrics.
+
+### B – AI/UI
+
+- Code chức năng đã hoàn thiện trên PR #6.
+- Việc thủ công còn lại: chạy prompt eval bằng key cá nhân, chụp ảnh demo và nhờ thành viên khác review PR.
+- Không gửi API key cho người khác và không lưu output chứa thông tin nhạy cảm.
+
+### C – Benchmark/report
+
+- Code runner, summary và plot đã viết sẵn.
+- Thực hiện theo [`C_GUIDE.md`](C_GUIDE.md).
+- Không dùng timing một lần chạy trên UI làm số liệu báo cáo.
+
+## 12. Git và tiêu chí merge
+
+```powershell
+git switch main
+git pull --ff-only origin main
+git switch -c feature/ten-nhiem-vu
+# sửa, test
+git add -- <dung-cac-file-cua-minh>
+git commit -m "mo ta ngan gon"
+git push -u origin feature/ten-nhiem-vu
+```
+
+- Không push trực tiếp `main`.
+- Mỗi PR cần ít nhất một người khác review.
+- Không merge khi test đỏ, có conversation chưa resolve hoặc lẫn dataset/build/secret.
+- PR #6 phải merge trước khi C tạo branch báo cáo từ `main`.
+
+## 13. Tiêu chí hoàn thành dự án
+
+- Ba thuật toán đúng trên ảnh thường và ảnh biên.
+- Sequential/OpenMP/CUDA dùng cùng hợp đồng API và kiểu output.
+- CUDA có Basic/Optimized và timing tách giai đoạn.
+- Benchmark Release warm-up 3–5, ít nhất 20 lần/cấu hình.
+- Có CSV thô, environment, mean/std, speedup, efficiency, throughput và error metrics.
+- UI manual/AI chạy được, hiển thị backend thật và tải ảnh kết quả.
+- Clone sạch có thể setup/build/test lại theo note này.

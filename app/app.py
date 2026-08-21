@@ -4,10 +4,12 @@ import streamlit as st
 from PIL import Image
 
 try:
+    from app.ai_parser import DEFAULT_MODEL, api_is_configured, parse_prompt
     from app.core_adapter import find_core_cli
     from app.pipeline_adapter import run_pipeline_step
     from app.pipeline_schema import MAX_OPERATIONS, validate_pipeline
 except ModuleNotFoundError:  # Cho phép Streamlit chạy file trực tiếp từ thư mục app.
+    from ai_parser import DEFAULT_MODEL, api_is_configured, parse_prompt
     from core_adapter import find_core_cli
     from pipeline_adapter import run_pipeline_step
     from pipeline_schema import MAX_OPERATIONS, validate_pipeline
@@ -138,7 +140,7 @@ with st.sidebar:
 
     mode = st.radio(
         "Chế độ xử lý",
-        ["Một thuật toán", "Ghép chuỗi nhiều bước"],
+        ["Một thuật toán", "Ghép chuỗi nhiều bước", "AI từ mô tả tiếng Việt"],
         help="Một thuật toán: chạy riêng 1 bước để xem kỹ kết quả/backend/timing. "
              "Ghép chuỗi: nối nhiều thuật toán liên tiếp trên cùng 1 ảnh.",
     )
@@ -173,7 +175,7 @@ with st.sidebar:
             "thread_count": int(thread_count),
         }]
 
-    else:
+    elif mode == "Ghép chuỗi nhiều bước":
         n_steps = st.number_input("Số bước", min_value=1, max_value=MAX_OPERATIONS, value=2, step=1)
         st.caption(f"Tối đa {MAX_OPERATIONS} bước / pipeline.")
         for i in range(int(n_steps)):
@@ -206,6 +208,23 @@ with st.sidebar:
                     "thread_count": int(thread_count),
                 })
 
+    else:
+        ai_prompt = st.text_area(
+            "Mô tả pipeline",
+            placeholder="Ví dụ: Làm mờ Gaussian kernel 5 sigma 1.5 rồi tìm biên Sobel ngưỡng 80 bằng OpenMP.",
+            height=150,
+            max_chars=2000,
+        )
+        selected_model = st.text_input(
+            "OpenAI model",
+            value=DEFAULT_MODEL,
+            help="Có thể đặt biến môi trường OPENAI_MODEL để đổi mặc định.",
+        )
+        if api_is_configured():
+            st.success("Đã tìm thấy OPENAI_API_KEY/Colab Secret.")
+        else:
+            st.warning("Chưa có API key. Manual mode vẫn hoạt động bình thường.")
+
     run = st.button("Chạy xử lý", use_container_width=True)
 
 uploaded = st.file_uploader("Chọn ảnh", type=["jpg", "jpeg", "png", "bmp"])
@@ -227,15 +246,23 @@ if run:
     if input_image is None:
         st.error("Chưa có ảnh đầu vào.")
     else:
-        candidate = {"operations": steps_config}
-        pipeline, err = validate_pipeline(candidate)
+        if mode == "AI từ mô tả tiếng Việt":
+            parsed_prompt = parse_prompt(ai_prompt, model=selected_model)
+            pipeline = parsed_prompt.pipeline
+            err = parsed_prompt.error
+            candidate = pipeline.model_dump(mode="json") if pipeline else {"operations": []}
+            if pipeline:
+                st.caption(f"Pipeline do AI tạo bằng model `{parsed_prompt.model}` và đã validate lại cục bộ.")
+        else:
+            candidate = {"operations": steps_config}
+            pipeline, err = validate_pipeline(candidate)
 
         if pipeline is None:
             st.error(f"Pipeline không hợp lệ, đã chặn trước khi gọi backend:\n\n{err}")
         else:
             st.subheader("Pipeline JSON đã xác thực")
             st.json(candidate)
-            algo_chip_row(active_keys=[op["algorithm"] for op in steps_config])
+            algo_chip_row(active_keys=[op.algorithm.value for op in pipeline.operations])
 
             current_image = input_image
             step_results = []
