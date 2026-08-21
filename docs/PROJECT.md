@@ -178,12 +178,14 @@ Không lưu notebook vào GitHub nếu chỉ chạy thử. Không mount Drive tr
 
 ### Mở UI trên Colab
 
-Không chạy `streamlit run` rồi mở `localhost:8501` vì localhost nằm trong máy ảo Colab. Trong notebook, chạy mục **Mở Streamlit UI trên Colab**. Cell sẽ:
+Không chạy `streamlit run` rồi mở `localhost:8501` vì localhost nằm trong máy ảo Colab. Colab kernel proxy không phù hợp với WebSocket của Streamlit và có thể trả 404 hoặc trang trắng. Trong notebook, chạy mục **Mở Streamlit UI trên Colab**. Trước lần đầu, tạo secret `NGROK_AUTHTOKEN` trong mục Secrets (biểu tượng chìa khóa) và bật quyền truy cập cho notebook. Cell sẽ:
 
 1. Kiểm tra `build-colab/image_pipeline_cli`.
 2. Chạy Streamlit nền và chờ health endpoint.
-3. Nhúng Pixel Lab trực tiếp trong notebook bằng Colab kernel proxy; không mở tab proxy mới vì Chrome có thể trả HTTP 404.
-4. Dừng server cũ nếu cell được chạy lại.
+3. Tạo liên kết HTTPS **Mở Pixel Lab Streamlit UI** bằng ngrok mà không in token ra output.
+4. Dừng server/tunnel cũ nếu cell được chạy lại.
+
+URL ngrok là URL công khai trong thời gian runtime còn hoạt động. Không chia sẻ URL và không tải dữ liệu nhạy cảm. Khi dùng xong, đóng tunnel bằng `ngrok.disconnect(ui_url)` hoặc ngắt runtime Colab.
 
 Nếu link không mở, xem log:
 

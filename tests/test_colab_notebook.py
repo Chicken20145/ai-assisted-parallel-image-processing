@@ -12,15 +12,15 @@ def test_colab_notebook_contains_streamlit_proxy_launcher() -> None:
     source = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
 
     assert notebook["nbformat"] == 4
-    assert "output.serve_kernel_port_as_iframe(8501, height=900)" in source
+    assert "ngrok.connect(8501, bind_tls=True)" in source
+    assert "userdata.get('NGROK_AUTHTOKEN')" in source
     assert "build-colab' / 'image_pipeline_cli" in source
     assert "127.0.0.1:8501/_stcore/health" in source
-    assert "giao diện được nhúng ngay bên dưới" in source
+    assert "Mở Pixel Lab Streamlit UI" in source
 
     launcher = next(
         "".join(cell["source"])
         for cell in notebook["cells"]
-        if "output.serve_kernel_port_as_iframe(8501, height=900)"
-        in "".join(cell.get("source", []))
+        if "ngrok.connect(8501, bind_tls=True)" in "".join(cell.get("source", []))
     )
     compile(launcher, "colab_streamlit_launcher", "exec")
