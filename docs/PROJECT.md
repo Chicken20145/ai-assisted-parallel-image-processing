@@ -38,7 +38,7 @@ Ngoài phạm vi: video thời gian thực, MPI, đa GPU, nhận diện khuôn m
 | Setup Windows/Colab, dataset BSDS300, 15 ảnh benchmark | Hoàn thành trên `main` |
 | API chung và CPU Sequential | Hoàn thành trên `main` |
 | OpenMP cho ba thuật toán | Hoàn thành trên `main` |
-| CUDA Basic/Optimized | Chưa triển khai; A làm tiếp |
+| CUDA Basic/Optimized | Đã triển khai thật; tự báo không khả dụng nếu runtime không có GPU |
 | Manual UI, schema, prompt corpus | Hoàn thành trên `main` |
 | Adapter UI → core C++ thật | Hoàn thành trên `main` |
 | AI prompt parser Structured Outputs | Hoàn thành code trên `main` |
@@ -74,7 +74,7 @@ Quy tắc quan trọng:
 - Output AI luôn bị Pydantic kiểm tra lại trước khi chạy.
 - Python không sao chép thuật toán C++ trong đường chạy thật.
 - `image_pipeline_cli` đọc ảnh P5/P6, gọi duy nhất `pip::process()` và trả JSON.
-- CUDA chưa có trả `BackendUnavailable`; UI fallback CUDA → OpenMP → Sequential và hiển thị backend thực tế.
+- CUDA chạy kernel thật và tách thời gian allocation/H2D/kernel/D2H/total; khi không có GPU trả `BackendUnavailable`.
 - Benchmark chính thức từ chối fallback để không gắn nhãn sai số liệu.
 
 ## 5. Cấu trúc repository
@@ -84,7 +84,7 @@ app/          Streamlit UI, AI parser, schema và adapter C++
 include/      API C++ công khai
 src/cpu/      Thuật toán CPU tuần tự
 src/openmp/   Thuật toán OpenMP
-src/cuda/     CUDA probe và backend CUDA tương lai
+src/cuda/     CUDA probe, CUDA Basic và CUDA Optimized
 scripts/      Setup, build, dataset, benchmark và phân tích
 tests/        CTest, pytest unit/integration
 data/         Dataset cục bộ, không commit
@@ -233,7 +233,7 @@ Ba cách tạo yêu cầu xử lý ảnh:
 
 - **Kiểm tra đủ 300 ảnh**: warm-up 1, đo 3 lần; dùng để kiểm tra độ đúng và độ phủ.
 - **Đo hiệu năng để làm báo cáo**: 15 ảnh nhiều độ phân giải, warm-up 3, đo 20 lần và thử các mức luồng phù hợp với CPU; khớp quy trình tại [`C_GUIDE.md`](C_GUIDE.md).
-- CUDA chỉ được thêm sau khi core CUDA thật hoàn thành; UI không ghi số liệu fallback dưới nhãn CUDA.
+- UI tự kiểm tra CUDA trước benchmark; chỉ thêm CUDA khi core trả đúng backend, không ghi fallback dưới nhãn CUDA.
 
 Thiết lập OpenAI trên Windows chỉ trong phiên terminal:
 
@@ -271,9 +271,9 @@ Dataset, archive, build, API key và kết quả tạm không được commit.
 
 ### A – Core
 
-- Triển khai CUDA Basic và CUDA Optimized.
-- Tách allocation/H2D/kernel/D2H/total bằng CUDA Event.
-- So sánh CUDA với Sequential bằng error metrics.
+- CUDA Basic và CUDA Optimized đã có trong core; tiếp tục đo để chọn block size tốt nhất theo GPU.
+- Timing allocation/H2D/kernel/D2H/total đã tách bằng CUDA Event và đồng hồ host.
+- Test CUDA so sánh kết quả với Sequential; tự bỏ qua có thông báo trên máy không có GPU.
 
 ### B – AI/UI
 

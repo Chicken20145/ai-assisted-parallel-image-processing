@@ -12,12 +12,12 @@ from PIL import Image
 
 try:
     from app.ai_parser import DEFAULT_MODEL, api_is_configured, parse_prompt
-    from app.core_adapter import find_core_cli
+    from app.core_adapter import find_core_cli, pip_process
     from app.pipeline_adapter import run_pipeline_step
     from app.pipeline_schema import MAX_OPERATIONS, validate_pipeline
 except ModuleNotFoundError:  # Cho phép chạy trực tiếp: streamlit run app/app.py
     from ai_parser import DEFAULT_MODEL, api_is_configured, parse_prompt
-    from core_adapter import find_core_cli
+    from core_adapter import find_core_cli, pip_process
     from pipeline_adapter import run_pipeline_step
     from pipeline_schema import MAX_OPERATIONS, validate_pipeline
 
@@ -91,7 +91,7 @@ def operation_controls(prefix: str) -> dict:
         key=f"{prefix}_backend",
     )
     thread_count = 0
-    if backend != "sequential":
+    if backend == "openmp":
         thread_count = int(
             st.number_input(
                 "Số luồng",
@@ -135,11 +135,15 @@ def show_step_metrics(index: int, algorithm: str, response, sequential_timing) -
             f"Không chạy được {BACKEND_LABELS[response.requested_backend]}; "
             f"đã chuyển sang {BACKEND_LABELS[response.actual_backend]}."
         )
-    metrics = st.columns(4)
-    metrics[0].metric("Backend", BACKEND_LABELS[response.actual_backend])
-    metrics[1].metric("Số luồng", response.threads_used)
-    metrics[2].metric("Kernel", f"{response.timing['kernel_ms']:.3f} ms")
-    metrics[3].metric("Tổng", f"{response.timing['total_ms']:.3f} ms")
+    first_row = st.columns(2, gap="large")
+    first_row[0].metric("Cách chạy", BACKEND_LABELS[response.actual_backend])
+    first_row[1].metric(
+        "Số luồng" if not response.actual_backend.startswith("cuda") else "Luồng mỗi block",
+        response.threads_used,
+    )
+    second_row = st.columns(2, gap="large")
+    second_row[0].metric("Thời gian xử lý", f"{response.timing['kernel_ms']:.3f} ms")
+    second_row[1].metric("Tổng thời gian", f"{response.timing['total_ms']:.3f} ms")
     if sequential_timing and response.timing["kernel_ms"] > 0:
         speedup = sequential_timing["kernel_ms"] / response.timing["kernel_ms"]
         st.metric("Tăng tốc so với CPU tuần tự", f"{speedup:.2f} lần")
@@ -307,6 +311,7 @@ def run_full_benchmark(
     raw_result: Path,
     summary_result: Path,
     plot_dir: Path,
+    backends: list[str],
 ) -> tuple[bool, str]:
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
     benchmark_command = [
@@ -314,7 +319,7 @@ def run_full_benchmark(
         str(ROOT / "scripts" / "run_benchmarks.py"),
         "--input-dir", str(input_dir),
         "--output", str(raw_result),
-        "--backends", "sequential", "openmp",
+        "--backends", *backends,
         "--threads", ",".join(str(value) for value in thread_counts),
         "--warmup", str(warmup),
         "--runs", str(runs),
@@ -355,25 +360,36 @@ def run_full_benchmark(
     return True, benchmark.stdout
 
 
+@st.cache_data(show_spinner=False)
+def available_backends(core_cli_value: str, commit: str) -> tuple[list[str], str]:
+    del core_cli_value, commit
+    backends = ["sequential", "openmp"]
+    messages: list[str] = []
+    probe_image = Image.new("RGB", (8, 8), color=(80, 120, 160))
+    for backend in ("cuda_basic", "cuda_optimized"):
+        result = pip_process(probe_image, "histogram_equalization", backend, {})
+        if result.ok and result.backend_used == backend:
+            backends.append(backend)
+        else:
+            messages.append(f"{BACKEND_LABELS[backend]}: {result.error_message or 'không khả dụng'}")
+    return backends, "; ".join(messages)
+
+
 def show_benchmark_results(raw_result: Path, summary_result: Path, label: str) -> None:
     if not raw_result.is_file() or not summary_result.is_file():
         return
     raw = pd.read_csv(raw_result)
     summary = pd.read_csv(summary_result)
-    sequential = raw.loc[raw["backend"] == "sequential", "kernel_ms"]
-    openmp = raw.loc[raw["backend"] == "openmp", "kernel_ms"]
-    speedup = summary.loc[summary["backend"] == "openmp", "speedup"]
-
     st.subheader(f"Kết quả: {label}")
-    first = st.columns(4)
-    first[0].metric("Ảnh đã chạy", raw["image_name"].nunique())
-    first[1].metric("Số lần đo", len(raw))
-    first[2].metric("CPU tuần tự", f"{sequential.mean():.3f} ms")
-    first[3].metric("OpenMP trung bình", f"{openmp.mean():.3f} ms")
-    second = st.columns(3)
-    second[0].metric("Tăng tốc trung bình", f"{speedup.mean():.2f} lần")
-    second[1].metric("Sai số MAE lớn nhất", f"{raw['mae'].max():.3f}")
-    second[2].metric("Thông lượng OpenMP", f"{raw.loc[raw['backend'] == 'openmp', 'throughput_mpix_s'].mean():.2f} MP/s")
+    overview = st.columns(3)
+    overview[0].metric("Ảnh đã chạy", raw["image_name"].nunique())
+    overview[1].metric("Số lần đo", len(raw))
+    overview[2].metric("Sai số MAE lớn nhất", f"{raw['mae'].max():.3f}")
+    present_backends = [name for name in BACKEND_LABELS if name in set(raw["backend"])]
+    timing_columns = st.columns(min(4, len(present_backends)))
+    for column, backend in zip(timing_columns, present_backends):
+        values = raw.loc[raw["backend"] == backend, "kernel_ms"]
+        column.metric(BACKEND_LABELS[backend], f"{values.mean():.3f} ms")
 
     table = (
         summary.groupby(["algorithm", "backend", "threads"], as_index=False)
@@ -451,10 +467,19 @@ def render_benchmark(core_cli: Path | None, images: list[Path]) -> None:
         )
     st.info(description)
 
+    backends, cuda_note = (
+        available_backends(str(core_cli), current_git_commit())
+        if core_cli is not None
+        else (["sequential", "openmp"], "Chưa build core C++.")
+    )
     status = st.columns(3)
     status[0].metric("Ảnh tìm thấy", f"{len(selected_images)}/{expected_images}")
     status[1].metric("Thuật toán", 3)
-    status[2].metric("Backend", 2)
+    status[2].metric("Backend", len(backends))
+    if len(backends) == 4:
+        st.success("CUDA đã sẵn sàng. Benchmark sẽ chạy CPU tuần tự, OpenMP, CUDA cơ bản và CUDA tối ưu.")
+    else:
+        st.warning(f"CUDA chưa chạy được trong runtime này. Benchmark chỉ chạy CPU/OpenMP. {cuda_note}")
 
     if selected_images:
         with st.expander(f"Danh sách {len(selected_images)} ảnh"):
@@ -498,6 +523,7 @@ def render_benchmark(core_cli: Path | None, images: list[Path]) -> None:
                 raw_result,
                 summary_result,
                 plot_dir,
+                backends,
             )
         if ok:
             st.success("Đã chạy xong benchmark.")
@@ -505,7 +531,6 @@ def render_benchmark(core_cli: Path | None, images: list[Path]) -> None:
             st.error("Benchmark không chạy được.")
             st.code(detail[-5000:] if detail else "Không có log.")
 
-    st.caption("CUDA chưa được tính vì core CUDA chưa hoàn thành.")
     show_benchmark_results(raw_result, summary_result, result_label)
 
 
@@ -517,6 +542,8 @@ def main() -> None:
         .stApp { background: #f6f7f9; color: #1f2937; }
         [data-testid="stHeader"] { background: #ffffff; border-bottom: 1px solid #e5e7eb; }
         .block-container { max-width: 1220px; padding-top: 2rem; padding-bottom: 3rem; }
+        [data-testid="stMetric"] { min-height: 128px; }
+        [data-testid="stMetricValue"] { white-space: normal; overflow: visible; text-overflow: clip; }
         h1, h2, h3, h4 { color: #111827 !important; letter-spacing: 0 !important; }
         [data-testid="stVerticalBlockBorderWrapper"] {
             background: #ffffff; border-color: #e5e7eb !important; border-radius: 12px;
