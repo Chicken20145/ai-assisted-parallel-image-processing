@@ -74,6 +74,13 @@
 - Không sao chép lại thuật toán của A bằng Python.
 - API key chỉ nằm trong environment/Colab Secrets.
 
+### Trạng thái B hiện tại
+
+- Manual mode, schema validation, 26 prompt test và UI tải/xem/lưu ảnh đã có trên PR #6.
+- Adapter mặc định đã gọi core C++ thật cho Sequential/OpenMP; CUDA fallback sang OpenMP rồi Sequential.
+- UI đã hiển thị pipeline JSON, backend thực tế, `threads_used`, timing và speedup tham khảo.
+- Còn lại của B: nối AI prompt parser với schema hiện có và bổ sung ảnh chụp demo. Phần này không chặn C benchmark core.
+
 ## Thành viên C – dữ liệu, benchmark và báo cáo
 
 ### Trách nhiệm
@@ -107,13 +114,15 @@ C có quyền từ chối số liệu thiếu cấu hình máy, số lần chạ
 ### B dùng ngay
 
 - Đọc `include/image_types.hpp` và `include/processing_api.hpp`.
-- Tích hợp `Sequential` và `OpenMP`; hiển thị `threads_used` khi chạy OpenMP và xử lý `BackendUnavailable` cho CUDA.
-- Không phụ thuộc benchmark CLI để đọc ảnh thật vì tính năng đó chưa có.
+- Tiếp tục AI prompt parser trên schema hiện có; không thay đổi hợp đồng adapter nếu chưa phối hợp với A.
+- Dùng `image_pipeline_cli` cho ảnh thật; không dùng benchmark CLI tổng hợp làm adapter UI.
 
 ### C dùng ngay
 
 - Setup Windows/Colab và kiểm tra 15 ảnh benchmark.
 - Chuẩn bị pipeline CSV bằng CLI ảnh tổng hợp.
+- Có thể dùng UI + `image_pipeline_cli` để kiểm tra tích hợp ảnh thật Sequential/OpenMP và chụp demo.
+- Không lấy timing/speedup một lần chạy trong UI làm số liệu benchmark chính thức.
 - Không dùng smoke benchmark để kết luận hiệu năng cuối cùng.
 
 ### A làm tiếp

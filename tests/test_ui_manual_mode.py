@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 from PIL import Image
 from streamlit.testing.v1 import AppTest
 
 from app.mock_adapter import pip_process
+from app import pipeline_adapter
 from app.pipeline_adapter import run_pipeline_step
 from app.pipeline_schema import MAX_OPERATIONS, validate_pipeline
 from app.prompt_test import TEST_PROMPTS, summary
@@ -93,8 +95,32 @@ def test_numpy_sobel_matches_core_rules_without_scipy() -> None:
         np.testing.assert_array_equal(np.array(result.output_image), _reference_sobel(image, threshold))
 
 
-def test_backend_unavailable_falls_back_to_sequential() -> None:
+def test_backend_unavailable_falls_back_to_sequential(monkeypatch) -> None:
     image = Image.new("RGB", (5, 5), color=(20, 40, 60))
+
+    def fake_process(source, algorithm, backend, params):
+        if backend == "openmp":
+            return SimpleNamespace(
+                ok=False,
+                error_code="BackendUnavailable",
+                backend_used="openmp",
+                threads_used=1,
+                timing={},
+                output_image=None,
+                error_message="",
+            )
+        return SimpleNamespace(
+            ok=True,
+            error_code="None",
+            backend_used="sequential",
+            threads_used=1,
+            timing={"allocation_ms": 0.0, "h2d_ms": 0.0, "kernel_ms": 1.0,
+                    "d2h_ms": 0.0, "total_ms": 1.0},
+            output_image=source,
+            error_message="",
+        )
+
+    monkeypatch.setattr(pipeline_adapter, "pip_process", fake_process)
     response = run_pipeline_step(image, "sobel", "openmp", {"threshold": 0})
     assert response.ok
     assert response.requested_backend == "openmp"
@@ -108,6 +134,22 @@ def test_invalid_image_does_not_trigger_backend_fallback() -> None:
     assert response.actual_backend == "openmp"
     assert not response.fallback_happened
     assert response.friendly_error
+
+
+def test_schema_validates_openmp_thread_count() -> None:
+    operation = {
+        "algorithm": "sobel",
+        "backend": "openmp",
+        "params": {"threshold": 100},
+        "thread_count": 4,
+    }
+    pipeline, error = validate_pipeline({"operations": [operation]})
+    assert pipeline is not None and error is None
+    assert pipeline.operations[0].thread_count == 4
+
+    operation["thread_count"] = 1025
+    pipeline, error = validate_pipeline({"operations": [operation]})
+    assert pipeline is None and error is not None
 
 
 def test_prompt_corpus_is_complete_and_has_unique_ids() -> None:

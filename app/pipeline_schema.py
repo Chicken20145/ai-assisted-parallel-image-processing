@@ -47,6 +47,7 @@ class GaussianBlurOperation(BaseModel):
     algorithm: Literal[AlgorithmEnum.GAUSSIAN_BLUR]
     backend: BackendEnum
     params: GaussianBlurParams
+    thread_count: int = Field(0, ge=0, le=1024)
 
     model_config = {"extra": "forbid"}
 
@@ -55,6 +56,7 @@ class SobelOperation(BaseModel):
     algorithm: Literal[AlgorithmEnum.SOBEL]
     backend: BackendEnum
     params: SobelParams
+    thread_count: int = Field(0, ge=0, le=1024)
 
     model_config = {"extra": "forbid"}
 
@@ -64,6 +66,7 @@ class HistogramEqualizationOperation(BaseModel):
     backend: BackendEnum
     # cho phép thiếu params -> mặc định object rỗng
     params: HistogramEqualizationParams = Field(default_factory=HistogramEqualizationParams)
+    thread_count: int = Field(0, ge=0, le=1024)
 
     model_config = {"extra": "forbid"}
 
@@ -121,6 +124,8 @@ _FIELD_MESSAGES = {
     ("sigma", "less_than_equal"): "sigma phải nhỏ hơn hoặc bằng 10.0.",
     ("threshold", "greater_than_equal"): "threshold phải lớn hơn hoặc bằng 0.",
     ("threshold", "less_than_equal"): "threshold phải nhỏ hơn hoặc bằng 255.",
+    ("thread_count", "greater_than_equal"): "thread_count phải lớn hơn hoặc bằng 0.",
+    ("thread_count", "less_than_equal"): "thread_count phải nhỏ hơn hoặc bằng 1024.",
     ("backend", "enum"): "backend không hợp lệ (chỉ nhận sequential, openmp, cuda_basic, cuda_optimized).",
     ("algorithm", "union_tag_invalid"): "algorithm không hợp lệ (chỉ nhận gaussian_blur, sobel, histogram_equalization).",
     ("operations", "too_short"): f"Pipeline phải có ít nhất 1 operation.",

@@ -1,10 +1,14 @@
+from io import BytesIO
+
 import streamlit as st
 from PIL import Image
 
 try:
+    from app.core_adapter import find_core_cli
     from app.pipeline_adapter import run_pipeline_step
     from app.pipeline_schema import MAX_OPERATIONS, validate_pipeline
 except ModuleNotFoundError:  # Cho phép Streamlit chạy file trực tiếp từ thư mục app.
+    from core_adapter import find_core_cli
     from pipeline_adapter import run_pipeline_step
     from pipeline_schema import MAX_OPERATIONS, validate_pipeline
 
@@ -108,10 +112,11 @@ hr { border-color: var(--bp-line) !important; }
 
 st.title("PIXEL LAB")
 st.markdown('<div class="hero-sub">Manual Image Processing Pipeline — 3 thuật toán, 4 backend, 1 pipeline JSON</div>', unsafe_allow_html=True)
-st.info(
-    "Mốc hiện tại dùng mock adapter để kiểm thử UI/schema. Mock chỉ xử lý sequential; "
-    "OpenMP/CUDA sẽ fallback cho tới khi adapter C++ thật được nối."
-)
+core_cli = find_core_cli()
+if core_cli:
+    st.success(f"Đã kết nối core C++ thật: `{core_cli.name}`. Sequential/OpenMP và timing đang chạy thực tế.")
+else:
+    st.error("Chưa tìm thấy `image_pipeline_cli`. Hãy build project trước khi bấm Chạy xử lý.")
 
 
 def algo_chip_row(active_keys=None, dim=True):
@@ -144,6 +149,15 @@ with st.sidebar:
         algo_label = st.selectbox("Thuật toán", list(ALGO_LABELS.values()))
         algorithm = [k for k, v in ALGO_LABELS.items() if v == algo_label][0]
         backend = st.selectbox("Backend", BACKEND_KEYS, format_func=lambda k: BACKEND_LABELS[k])
+        thread_count = 0
+        if backend != "sequential":
+            thread_count = st.number_input(
+                "Số luồng OpenMP",
+                min_value=0,
+                max_value=1024,
+                value=0,
+                help="0 = OpenMP runtime tự chọn; cũng được dùng khi CUDA fallback sang OpenMP.",
+            )
 
         params = {}
         if algorithm == "gaussian_blur":
@@ -152,7 +166,12 @@ with st.sidebar:
         elif algorithm == "sobel":
             params["threshold"] = st.slider("Threshold", 0, 255, 100)
 
-        steps_config = [{"algorithm": algorithm, "backend": backend, "params": params}]
+        steps_config = [{
+            "algorithm": algorithm,
+            "backend": backend,
+            "params": params,
+            "thread_count": int(thread_count),
+        }]
 
     else:
         n_steps = st.number_input("Số bước", min_value=1, max_value=MAX_OPERATIONS, value=2, step=1)
@@ -162,6 +181,16 @@ with st.sidebar:
                 algo_label = st.selectbox("Thuật toán", list(ALGO_LABELS.values()), key=f"algo_{i}")
                 algorithm = [k for k, v in ALGO_LABELS.items() if v == algo_label][0]
                 backend = st.selectbox("Backend", BACKEND_KEYS, format_func=lambda k: BACKEND_LABELS[k], key=f"backend_{i}")
+                thread_count = 0
+                if backend != "sequential":
+                    thread_count = st.number_input(
+                        "Số luồng OpenMP",
+                        min_value=0,
+                        max_value=1024,
+                        value=0,
+                        key=f"threads_{i}",
+                        help="0 = OpenMP runtime tự chọn; cũng dùng khi CUDA fallback.",
+                    )
 
                 params = {}
                 if algorithm == "gaussian_blur":
@@ -170,7 +199,12 @@ with st.sidebar:
                 elif algorithm == "sobel":
                     params["threshold"] = st.slider("Threshold", 0, 255, 100, key=f"thr_{i}")
 
-                steps_config.append({"algorithm": algorithm, "backend": backend, "params": params})
+                steps_config.append({
+                    "algorithm": algorithm,
+                    "backend": backend,
+                    "params": params,
+                    "thread_count": int(thread_count),
+                })
 
     run = st.button("Chạy xử lý", use_container_width=True)
 
@@ -199,6 +233,8 @@ if run:
         if pipeline is None:
             st.error(f"Pipeline không hợp lệ, đã chặn trước khi gọi backend:\n\n{err}")
         else:
+            st.subheader("Pipeline JSON đã xác thực")
+            st.json(candidate)
             algo_chip_row(active_keys=[op["algorithm"] for op in steps_config])
 
             current_image = input_image
@@ -207,22 +243,45 @@ if run:
 
             for i, op in enumerate(pipeline.operations):
                 response = run_pipeline_step(
-                    current_image, op.algorithm.value, op.backend.value, op.params.model_dump()
+                    current_image,
+                    op.algorithm.value,
+                    op.backend.value,
+                    op.params.model_dump(),
+                    op.thread_count,
                 )
-                step_results.append((op.algorithm.value, response))
+                sequential_timing = None
                 if not response.ok:
                     st.error(f"Bước {i + 1} ({op.algorithm.value}) thất bại: {response.friendly_error}")
                     failed = True
                     break
+                if response.actual_backend == "openmp":
+                    reference = run_pipeline_step(
+                        current_image,
+                        op.algorithm.value,
+                        "sequential",
+                        op.params.model_dump(),
+                    )
+                    if reference.ok:
+                        sequential_timing = reference.timing
+                step_results.append((op.algorithm.value, response, sequential_timing))
                 current_image = response.output_image
 
             if not failed:
                 with col_output:
                     st.subheader("Ảnh kết quả")
                     st.image(current_image, use_container_width=True)
+                    output_buffer = BytesIO()
+                    current_image.save(output_buffer, format="PNG")
+                    st.download_button(
+                        "Tải ảnh kết quả (PNG)",
+                        data=output_buffer.getvalue(),
+                        file_name="pixel_lab_output.png",
+                        mime="image/png",
+                        use_container_width=True,
+                    )
 
                 st.subheader("Chi tiết từng bước")
-                for i, (algo_name, response) in enumerate(step_results):
+                for i, (algo_name, response, sequential_timing) in enumerate(step_results):
                     with st.expander(f"Bước {i + 1}: {algo_name} → backend: {response.actual_backend}", expanded=(i == len(step_results) - 1)):
                         if response.fallback_happened:
                             st.warning(
@@ -231,6 +290,7 @@ if run:
                             )
                         else:
                             st.success(f"Chạy thành công trên backend: **{response.actual_backend}**")
+                        st.caption(f"Số luồng core báo cáo: {response.threads_used}")
 
                         t = response.timing
                         tcols = st.columns(5)
@@ -240,8 +300,10 @@ if run:
                         tcols[3].metric("D2H (ms)", t["d2h_ms"])
                         tcols[4].metric("Total (ms)", t["total_ms"])
 
-                        if response.actual_backend == "sequential":
+                        if sequential_timing and response.timing["kernel_ms"] > 0:
+                            speedup = sequential_timing["kernel_ms"] / response.timing["kernel_ms"]
+                            st.metric("Speedup tham khảo so với Sequential", f"{speedup:.3f}×")
                             st.caption(
-                                "Speedup sẽ hiển thị sau khi UI nối adapter C++ thật. "
-                                "Core A đã có Sequential/OpenMP; mock UI hiện chỉ chạy sequential."
+                                "Đây là phép chạy nhanh trong UI, không thay thế quy trình benchmark "
+                                "warm-up và lặp nhiều lần của thành viên C."
                             )

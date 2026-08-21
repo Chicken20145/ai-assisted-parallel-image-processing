@@ -55,14 +55,24 @@ Kết quả đúng phải có `100% tests passed`, số luồng OpenMP dương v
 
 ### Chạy manual UI của B
 
-Sau khi setup Python, chạy từ thư mục gốc repository:
+UI cần executable `image_pipeline_cli`, vì vậy build Release trước rồi chạy từ thư mục gốc repository:
 
 ```powershell
+.\scripts\build_windows.ps1 -Configuration Release
 .\.venv\Scripts\python.exe -m pytest .\tests\test_ui_manual_mode.py -q
+.\.venv\Scripts\python.exe -m pytest .\tests\test_core_adapter_integration.py -q
 .\.venv\Scripts\python.exe -m streamlit run .\app\app.py
 ```
 
-Mở địa chỉ Streamlit in trong terminal, tải ảnh rồi chọn thuật toán/backend. Mốc hiện tại dùng mock adapter để kiểm tra UI, schema và fallback; mock chỉ xử lý `sequential`. Core C++ đã có `Sequential/OpenMP`, nhưng B vẫn phải nối adapter C++ thật trước khi dùng timing hoặc speedup làm kết quả chính thức.
+Mở địa chỉ Streamlit in trong terminal, tải ảnh rồi chọn thuật toán/backend. Dòng trạng thái màu xanh phải báo đã kết nối `image_pipeline_cli`. Sequential và OpenMP gọi core C++ thật; CUDA chưa triển khai sẽ tự fallback sang OpenMP. UI hiển thị backend thực tế, số luồng, timing và speedup tham khảo, đồng thời cho tải ảnh PNG kết quả.
+
+Nếu executable nằm ngoài thư mục build mặc định, chỉ định đường dẫn:
+
+```powershell
+$env:PIP_CORE_CLI = 'D:\duong-dan\image_pipeline_cli.exe'
+```
+
+Timing/speedup trong UI chỉ là một lần chạy tương tác để demo. C vẫn phải dùng quy trình benchmark Release có warm-up, tối thiểu 20 lần chạy và lưu CSV thô.
 
 ## Google Colab
 
@@ -96,6 +106,13 @@ Trong cùng runtime, cập nhật code mới mà không setup lại:
 !git pull --ff-only origin main
 !bash scripts/build_colab.sh
 !bash scripts/test_colab.sh
+```
+
+Chạy UI trên Colab sau khi build:
+
+```bash
+!PIP_CORE_CLI=/content/ai-assisted-parallel-image-processing/build-colab/image_pipeline_cli \
+  streamlit run app/app.py --server.headless true
 ```
 
 Kết quả thành công:

@@ -45,8 +45,9 @@ tests/          Kiểm thử tính đúng đắn
 - Đã tải BSDS300 và tạo 15 ảnh benchmark cục bộ.
 - Đã có API chung, CPU tuần tự, OpenMP, CTest, MAE/MSE và CLI benchmark tổng hợp.
 - Đã triển khai grayscale, Gaussian Blur, Sobel và Histogram Equalization tuần tự.
-- Đã có manual UI Streamlit, JSON schema, prompt corpus và fallback chạy qua mock adapter tuần tự.
-- Chưa triển khai CUDA Basic, CUDA Optimized, adapter C++ thật, AI prompt parser và đọc ảnh thật trong benchmark CLI.
+- Đã có manual UI Streamlit, JSON schema, prompt corpus và adapter gọi core C++ thật qua `image_pipeline_cli`.
+- UI chạy được Sequential/OpenMP trên ảnh tải lên, hiển thị backend thực tế, số luồng, timing, fallback và tải ảnh kết quả.
+- Chưa triển khai CUDA Basic, CUDA Optimized, AI prompt parser và đọc ảnh thật trong benchmark CLI.
 - Backend chưa triển khai trả `BackendUnavailable`; đây là hành vi có chủ ý.
 
 Các PR nền tảng đã merge:
@@ -112,6 +113,8 @@ Tham số:
 | Histogram Equalization | Grayscale một kênh |
 
 `ProcessingResult::threads_used` cho biết số thread được cấu hình cho lần chạy. Mã lỗi chung: `None`, `InvalidImage`, `InvalidParameters`, `BackendUnavailable`, `InternalError`. B phải kiểm tra `result.ok()` trước khi đọc ảnh đầu ra.
+
+UI không sao chép thuật toán bằng Python. `app/core_adapter.py` chuyển ảnh lossless sang PPM/PGM tạm, gọi `image_pipeline_cli`; executable này đọc ảnh rồi gọi duy nhất API `pip::process()`. Khi CUDA trả `BackendUnavailable`, adapter thử OpenMP rồi Sequential và luôn hiển thị backend thực tế. Mock chỉ còn phục vụ unit test đối chiếu, không nằm trong đường chạy mặc định của UI.
 
 Timing chung gồm `allocation_ms`, `h2d_ms`, `kernel_ms`, `d2h_ms`, `total_ms`. CPU tuần tự hiện dùng `kernel_ms == total_ms`; CUDA phải tách riêng các giai đoạn.
 
