@@ -218,11 +218,18 @@ Build core trước:
 .\.venv\Scripts\python.exe -m streamlit run .\app\app.py
 ```
 
-UI có ba chế độ:
+UI có hai tab:
+
+1. **Xử lý một ảnh**: tải ảnh riêng hoặc chọn trực tiếp một trong 300 ảnh BSDS300; chọn một bước, nhiều bước hoặc nhập yêu cầu AI; bấm **Chạy và xem chỉ số**.
+2. **Benchmark 300 ảnh**: tự kiểm tra đủ `300/300`, chạy ba thuật toán trên Sequential/OpenMP bằng một nút và hiện thời gian, speedup, throughput, MAE cùng file CSV tải về.
+
+Ba cách tạo yêu cầu xử lý ảnh:
 
 1. Một thuật toán.
 2. Pipeline thủ công tối đa năm bước.
 3. AI từ mô tả tiếng Việt.
+
+Nút benchmark trong UI dùng warm-up 1 và 3 lần đo để kiểm tra nhanh toàn bộ 300 ảnh. Số liệu chính thức trong báo cáo vẫn phải chạy theo cấu hình lặp tại [`C_GUIDE.md`](C_GUIDE.md).
 
 Thiết lập OpenAI trên Windows chỉ trong phiên terminal:
 
