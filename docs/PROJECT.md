@@ -45,7 +45,8 @@ tests/          Kiểm thử tính đúng đắn
 - Đã tải BSDS300 và tạo 15 ảnh benchmark cục bộ.
 - Đã có API chung, CPU tuần tự, OpenMP, CTest, MAE/MSE và CLI benchmark tổng hợp.
 - Đã triển khai grayscale, Gaussian Blur, Sobel và Histogram Equalization tuần tự.
-- Chưa triển khai CUDA Basic, CUDA Optimized, adapter UI và đọc ảnh thật trong benchmark CLI.
+- Đã có manual UI Streamlit, JSON schema, prompt corpus và fallback chạy qua mock adapter tuần tự.
+- Chưa triển khai CUDA Basic, CUDA Optimized, adapter C++ thật, AI prompt parser và đọc ảnh thật trong benchmark CLI.
 - Backend chưa triển khai trả `BackendUnavailable`; đây là hành vi có chủ ý.
 
 Các PR nền tảng đã merge:

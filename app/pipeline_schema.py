@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from enum import Enum
 from typing import Annotated, List, Literal, Union
 
@@ -62,7 +63,7 @@ class HistogramEqualizationOperation(BaseModel):
     algorithm: Literal[AlgorithmEnum.HISTOGRAM_EQUALIZATION]
     backend: BackendEnum
     # cho phép thiếu params -> mặc định object rỗng
-    params: HistogramEqualizationParams = HistogramEqualizationParams()
+    params: HistogramEqualizationParams = Field(default_factory=HistogramEqualizationParams)
 
     model_config = {"extra": "forbid"}
 
@@ -158,6 +159,9 @@ def pipeline_to_dicts(pipeline: Pipeline) -> list[dict]:
 
 
 if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
     test_cases = [
         # (mô tả, JSON)
         ("Hợp lệ - Gaussian Blur", {

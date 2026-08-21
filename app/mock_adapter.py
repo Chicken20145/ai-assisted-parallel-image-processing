@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import sys
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -27,15 +28,20 @@ def _run_gaussian_blur(img: Image.Image, params: dict) -> Image.Image:
 
 def _run_sobel(img: Image.Image, params: dict) -> Image.Image:
     gray = np.array(img.convert("L"), dtype=np.float32)
-    kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=np.float32)
-    ky = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=np.float32)
+    padded = np.pad(gray, pad_width=1, mode="edge")
+    top_left = padded[:-2, :-2]
+    top = padded[:-2, 1:-1]
+    top_right = padded[:-2, 2:]
+    middle_left = padded[1:-1, :-2]
+    middle_right = padded[1:-1, 2:]
+    bottom_left = padded[2:, :-2]
+    bottom = padded[2:, 1:-1]
+    bottom_right = padded[2:, 2:]
 
-    from scipy.signal import convolve2d  # noqa: local import, chỉ dùng cho mock
-    # Lưu ý: boundary="symm" (phản chiếu) khác với "clamp" (lặp biên) của core thật -
-    # kết quả pixel sát viền sẽ hơi khác C++ core, chỉ chấp nhận được cho demo.
-    gx = convolve2d(gray, kx, mode="same", boundary="symm")
-    gy = convolve2d(gray, ky, mode="same", boundary="symm")
-    magnitude = np.clip(np.round(np.sqrt(gx ** 2 + gy ** 2)), 0, 255)
+    gx = -top_left + top_right - 2 * middle_left + 2 * middle_right - bottom_left + bottom_right
+    gy = -top_left - 2 * top - top_right + bottom_left + 2 * bottom + bottom_right
+    # Magnitude không âm nên floor(x + 0.5) tương đương std::lround của core C++.
+    magnitude = np.clip(np.floor(np.sqrt(gx ** 2 + gy ** 2) + 0.5), 0, 255)
 
     threshold = params["threshold"]
     if threshold > 0:
@@ -80,7 +86,7 @@ def pip_process(image: Image.Image, algorithm: str, backend: str, params: dict) 
     t_start = time.perf_counter()
     try:
         output = _ALGORITHM_FUNCS[algorithm](image, params)
-    except Exception:
+    except (KeyError, TypeError, ValueError):
         return ProcessingResult(ok=False, error_code="InternalError")
     t_end = time.perf_counter()
 
@@ -97,6 +103,9 @@ def pip_process(image: Image.Image, algorithm: str, backend: str, params: dict) 
 
 
 if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
     img = Image.new("L", (4, 4), color=100)
     img.putpixel((2, 2), 200)
 

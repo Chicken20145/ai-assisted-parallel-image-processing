@@ -53,6 +53,17 @@ Script tự tìm MSVC, CMake và Ninja đi kèm Visual Studio; không cần thê
 
 Kết quả đúng phải có `100% tests passed`, số luồng OpenMP dương và ít nhất một CUDA device trên máy NVIDIA.
 
+### Chạy manual UI của B
+
+Sau khi setup Python, chạy từ thư mục gốc repository:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest .\tests\test_ui_manual_mode.py -q
+.\.venv\Scripts\python.exe -m streamlit run .\app\app.py
+```
+
+Mở địa chỉ Streamlit in trong terminal, tải ảnh rồi chọn thuật toán/backend. Mốc hiện tại dùng mock adapter để kiểm tra UI, schema và fallback; mock chỉ xử lý `sequential`. Core C++ đã có `Sequential/OpenMP`, nhưng B vẫn phải nối adapter C++ thật trước khi dùng timing hoặc speedup làm kết quả chính thức.
+
 ## Google Colab
 
 Repository là private. Mỗi thành viên phải là collaborator và cấp quyền GitHub cho Colab.

@@ -1,13 +1,17 @@
 import streamlit as st
 from PIL import Image
 
-from pipeline_adapter import run_pipeline_step
-from pipeline_schema import MAX_OPERATIONS, validate_pipeline
+try:
+    from app.pipeline_adapter import run_pipeline_step
+    from app.pipeline_schema import MAX_OPERATIONS, validate_pipeline
+except ModuleNotFoundError:  # Cho phép Streamlit chạy file trực tiếp từ thư mục app.
+    from pipeline_adapter import run_pipeline_step
+    from pipeline_schema import MAX_OPERATIONS, validate_pipeline
 
 # ----------------------------------------------------------------------------
 # Cấu hình trang + giao diện tuỳ chỉnh
 # ----------------------------------------------------------------------------
-st.set_page_config(page_title="Pixel Lab · AI Image Pipeline", layout="wide", page_icon="◧")
+st.set_page_config(page_title="Pixel Lab · Manual Image Pipeline", layout="wide", page_icon="◧")
 
 ALGO_LABELS = {
     "gaussian_blur": "Gaussian Blur",
@@ -103,7 +107,11 @@ hr { border-color: var(--bp-line) !important; }
 """, unsafe_allow_html=True)
 
 st.title("PIXEL LAB")
-st.markdown('<div class="hero-sub">AI Image Processing Pipeline — 3 thuật toán, 4 backend, 1 pipeline JSON</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-sub">Manual Image Processing Pipeline — 3 thuật toán, 4 backend, 1 pipeline JSON</div>', unsafe_allow_html=True)
+st.info(
+    "Mốc hiện tại dùng mock adapter để kiểm thử UI/schema. Mock chỉ xử lý sequential; "
+    "OpenMP/CUDA sẽ fallback cho tới khi adapter C++ thật được nối."
+)
 
 
 def algo_chip_row(active_keys=None, dim=True):
@@ -234,6 +242,6 @@ if run:
 
                         if response.actual_backend == "sequential":
                             st.caption(
-                                "Speedup sẽ hiển thị khi backend OpenMP/CUDA của A hoàn thành "
-                                "(hiện chỉ sequential được triển khai)."
+                                "Speedup sẽ hiển thị sau khi UI nối adapter C++ thật. "
+                                "Core A đã có Sequential/OpenMP; mock UI hiện chỉ chạy sequential."
                             )

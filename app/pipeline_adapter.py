@@ -1,7 +1,11 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from PIL import Image
-from mock_adapter import ProcessingResult, pip_process
+
+try:
+    from app.mock_adapter import pip_process
+except ModuleNotFoundError:  # Cho phép `streamlit run app/app.py` từ thư mục project.
+    from mock_adapter import pip_process
 
 FALLBACK_CHAIN = {
     "cuda_optimized": ["cuda_basic", "openmp", "sequential"],
@@ -28,21 +32,23 @@ class AdapterResponse:
     friendly_error: str | None
 
 def run_pipeline_step(image, algorithm, backend, params):
-    tried = [backend]
-    result = pip_process(image, algorithm, backend, params)
-    if not result.ok and result.error_code == "BackendUnavailable":
-        for fb in FALLBACK_CHAIN.get(backend, []):
-            tried.append(fb)
-            result = pip_process(image, algorithm, fb, params)
-            if result.ok:
-                backend = fb
-                break
+    requested_backend = backend
+    attempted_backends = [backend, *FALLBACK_CHAIN.get(backend, [])]
+    actual_backend = backend
+    result = None
+    for candidate in attempted_backends:
+        actual_backend = candidate
+        result = pip_process(image, algorithm, candidate, params)
+        if result.ok or result.error_code != "BackendUnavailable":
+            break
+
+    assert result is not None
     return AdapterResponse(
         ok=result.ok,
         output_image=result.output_image,
-        requested_backend=tried[0],
-        actual_backend=backend,
-        fallback_happened=len(tried) > 1,
+        requested_backend=requested_backend,
+        actual_backend=actual_backend,
+        fallback_happened=actual_backend != requested_backend,
         timing=result.timing,
         friendly_error=None if result.ok else FRIENDLY_ERRORS.get(result.error_code, "Lỗi không xác định."),
     )

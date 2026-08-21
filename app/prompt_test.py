@@ -1,3 +1,6 @@
+import sys
+
+
 TEST_PROMPTS = [
     # ------------------------- VALID (6) -------------------------
     {
@@ -188,6 +191,9 @@ def summary() -> dict:
 
 
 if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
     ids = [c["id"] for c in TEST_PROMPTS]
     dupes = {i for i in ids if ids.count(i) > 1}
     print(f"Tổng số prompt: {len(TEST_PROMPTS)}")
