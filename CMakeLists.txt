@@ -38,6 +38,13 @@ set_target_properties(parallel_image_processing PROPERTIES CUDA_SEPARABLE_COMPIL
 add_executable(image_benchmark src/benchmark_cli.cpp)
 target_link_libraries(image_benchmark PRIVATE image_processing_core)
 
+add_executable(image_pipeline_cli src/pipeline_cli.cpp)
+target_link_libraries(image_pipeline_cli PRIVATE image_processing_core)
+
+if(MSVC)
+    target_compile_options(image_pipeline_cli PRIVATE /utf-8)
+endif()
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(cpu_algorithm_tests tests/test_cpu_algorithms.cpp)

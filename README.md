@@ -38,7 +38,7 @@ tests/          Kiểm tra tính đúng đắn và trường hợp biên
 
 ## Thiết lập Windows
 
-Hướng dẫn đầy đủ: [`docs/SETUP.md`](docs/SETUP.md).
+Hướng dẫn đầy đủ: [`docs/PROJECT.md`](docs/PROJECT.md).
 
 Yêu cầu: Visual Studio có workload **Desktop development with C++**, CUDA Toolkit và Python 3.10 trở lên. Thiết lập nhanh trong PowerShell:
 
@@ -68,14 +68,14 @@ API, thuật toán, dữ liệu và trạng thái hiện tại được mô tả
 
 ## Thiết lập Google Colab
 
-Hướng dẫn đầy đủ: [`docs/SETUP.md`](docs/SETUP.md).
+Hướng dẫn đầy đủ: [`docs/PROJECT.md`](docs/PROJECT.md).
 
 1. Mở [notebook thiết lập Colab](notebooks/colab_setup.ipynb) trên Google Colab.
 2. Chọn **Runtime → Change runtime type → GPU**.
 3. Chạy lần lượt các cell; cell chính gọi `scripts/setup_colab.sh` để cài dependency, tải dữ liệu, build Release và ghi cấu hình runtime.
 4. Chạy benchmark trên `/content`; chỉ sao chép kết quả cuối sang Google Drive để độ trễ Drive không ảnh hưởng phép đo.
 
-Repository là private nên mỗi thành viên phải có quyền collaborator và cấp quyền GitHub cho Colab. Với branch chứa dấu `/`, dùng URL đã mã hóa trong `docs/SETUP.md`.
+Repository là private nên mỗi thành viên phải có quyền collaborator và cấp quyền GitHub cho Colab. Với branch chứa dấu `/`, xem cách mở trong `docs/PROJECT.md`.
 
 Có thể chạy trực tiếp trong một repository đã clone:
 
@@ -117,5 +117,5 @@ Với trình build một cấu hình, file thực thi có thể nằm trực ti�
 Tài liệu chính của dự án:
 
 - [`docs/PROJECT.md`](docs/PROJECT.md): dự án có gì, phạm vi, API và trạng thái.
-- [`docs/SETUP.md`](docs/SETUP.md): cần cài gì và cách chạy Windows/Colab.
-- [`docs/TEAM_TASKS.md`](docs/TEAM_TASKS.md): A/B/C làm gì và bàn giao cho nhau thế nào.
+- [`docs/PROJECT.md`](docs/PROJECT.md): toàn bộ mục tiêu, kiến trúc, trạng thái, setup và phân công dự án.
+- [`docs/C_GUIDE.md`](docs/C_GUIDE.md): lệnh benchmark, CSV, biểu đồ và checklist bàn giao riêng cho C.
