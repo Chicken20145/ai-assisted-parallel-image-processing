@@ -98,9 +98,6 @@ void test_dispatcher_validation() {
     check(automatic.ok() && automatic.threads_used > 0,
           "Thread 0 phải dùng cấu hình tự động của OpenMP runtime");
 
-    const auto cuda = pip::process(image, pip::Algorithm::Sobel, params, pip::Backend::CudaBasic);
-    check(!cuda.ok() && cuda.error == pip::ProcessingError::BackendUnavailable,
-          "CUDA chưa triển khai vẫn phải trả BackendUnavailable");
 }
 
 }  // namespace

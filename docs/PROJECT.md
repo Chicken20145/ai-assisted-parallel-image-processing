@@ -38,14 +38,14 @@ Ngoài phạm vi: video thời gian thực, MPI, đa GPU, nhận diện khuôn m
 | Setup Windows/Colab, dataset BSDS300, 15 ảnh benchmark | Hoàn thành trên `main` |
 | API chung và CPU Sequential | Hoàn thành trên `main` |
 | OpenMP cho ba thuật toán | Hoàn thành trên `main` |
-| CUDA Basic/Optimized | Chưa triển khai; A làm tiếp |
-| Manual UI, schema, prompt corpus | Hoàn thành trên Draft PR #6 |
-| Adapter UI → core C++ thật | Hoàn thành trên Draft PR #6 |
-| AI prompt parser Structured Outputs | Hoàn thành code trên Draft PR #6 |
-| Runner CSV/summary/biểu đồ cho C | Hoàn thành code trên Draft PR #6 |
-| Benchmark chính thức và báo cáo | C chạy sau khi PR #6 merge |
+| CUDA Basic/Optimized | Đã triển khai thật; tự báo không khả dụng nếu runtime không có GPU |
+| Manual UI, schema, prompt corpus | Hoàn thành trên `main` |
+| Adapter UI → core C++ thật | Hoàn thành trên `main` |
+| AI prompt parser Structured Outputs | Hoàn thành code trên `main` |
+| Runner CSV/summary/biểu đồ cho C | Hoàn thành code trên `main` |
+| Benchmark chính thức và báo cáo | C có thể bắt đầu từ `main` |
 
-PR đang dùng: [PR #6 – Manual UI, AI schema và C++ adapter](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/6). PR vẫn để Draft cho đến khi một thành viên khác review.
+[PR #6 – UI/AI adapter và benchmark](https://github.com/Chicken20145/ai-assisted-parallel-image-processing/pull/6) đã merge vào `main` tại commit `816ce98`.
 
 ## 4. Kiến trúc
 
@@ -74,7 +74,7 @@ Quy tắc quan trọng:
 - Output AI luôn bị Pydantic kiểm tra lại trước khi chạy.
 - Python không sao chép thuật toán C++ trong đường chạy thật.
 - `image_pipeline_cli` đọc ảnh P5/P6, gọi duy nhất `pip::process()` và trả JSON.
-- CUDA chưa có trả `BackendUnavailable`; UI fallback CUDA → OpenMP → Sequential và hiển thị backend thực tế.
+- CUDA chạy kernel thật và tách thời gian allocation/H2D/kernel/D2H/total; khi không có GPU trả `BackendUnavailable`.
 - Benchmark chính thức từ chối fallback để không gắn nhãn sai số liệu.
 
 ## 5. Cấu trúc repository
@@ -84,7 +84,7 @@ app/          Streamlit UI, AI parser, schema và adapter C++
 include/      API C++ công khai
 src/cpu/      Thuật toán CPU tuần tự
 src/openmp/   Thuật toán OpenMP
-src/cuda/     CUDA probe và backend CUDA tương lai
+src/cuda/     CUDA probe, CUDA Basic và CUDA Optimized
 scripts/      Setup, build, dataset, benchmark và phân tích
 tests/        CTest, pytest unit/integration
 data/         Dataset cục bộ, không commit
@@ -157,13 +157,25 @@ Build/test riêng:
 
 ## 8. Thiết lập Google Colab
 
-Repository private nên tài khoản phải là collaborator. Mở:
+Mở notebook chính thức trên nhánh `main`:
 
 ```text
 https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/main/notebooks/colab_setup.ipynb
 ```
 
-Nếu 404: **File → Open notebook → GitHub**, bật kho private, authorize GitHub, chọn branch và notebook. Sau đó chọn **Runtime → Change runtime type → GPU** rồi chạy từ trên xuống.
+Nếu không mở được: **File → Open notebook → GitHub**, chọn repository, branch `main` và `notebooks/colab_setup.ipynb`.
+
+Trình tự chạy lần đầu:
+
+1. Chọn **Runtime → Change runtime type → T4 GPU**, rồi **Connect**.
+2. Mở **Secrets** (biểu tượng chìa khóa), tạo `NGROK_AUTHTOKEN` từ [ngrok dashboard](https://dashboard.ngrok.com/get-started/your-authtoken) và bật quyền notebook. Chỉ tạo thêm `OPENAI_API_KEY` khi cần chế độ AI.
+3. Chạy từng cell từ trên xuống; không chuyển cell khi còn đang chạy hoặc có traceback đỏ.
+4. Xác nhận cell in `ĐÃ ĐỒNG BỘ GITHUB` cùng branch/commit, setup hoàn thành và test báo `100% tests passed`.
+5. Chạy cell **Mở Streamlit UI trên Colab**, rồi bấm **Mở Pixel Lab Streamlit UI**.
+
+Giao diện hiển thị `Phiên bản Git đang chạy` ngay dưới tiêu đề. Mã này phải giống mã commit mà cell cập nhật vừa in; nếu khác, chạy lại cell cập nhật và cell mở Streamlit để khởi động lại server.
+
+Không chạy cell cũ chứa `serve_kernel_port_as_iframe`, không mở `localhost:8501` và không ghi token trực tiếp vào notebook.
 
 Cập nhật code trong cùng runtime:
 
@@ -176,6 +188,29 @@ Cập nhật code trong cùng runtime:
 
 Không lưu notebook vào GitHub nếu chỉ chạy thử. Không mount Drive trong lúc benchmark; chỉ sao chép kết quả sang Drive sau khi đo xong.
 
+### Mở UI trên Colab
+
+Không chạy `streamlit run` rồi mở `localhost:8501` vì localhost nằm trong máy ảo Colab. Colab kernel proxy không phù hợp với WebSocket của Streamlit và có thể trả 404 hoặc trang trắng. Trong notebook, chạy mục **Mở Streamlit UI trên Colab**. Trước lần đầu, tạo secret `NGROK_AUTHTOKEN` trong mục Secrets (biểu tượng chìa khóa) và bật quyền truy cập cho notebook. Cell sẽ:
+
+1. Kiểm tra `build-colab/image_pipeline_cli`.
+2. Chạy Streamlit nền và chờ health endpoint.
+3. Tạo liên kết HTTPS **Mở Pixel Lab Streamlit UI** bằng ngrok mà không in token ra output.
+4. Dừng server/tunnel cũ nếu cell được chạy lại.
+
+URL ngrok là URL công khai trong thời gian runtime còn hoạt động. Không chia sẻ URL và không tải dữ liệu nhạy cảm. Khi dùng xong, đóng tunnel bằng `ngrok.disconnect(ui_url)` hoặc ngắt runtime Colab.
+
+Nếu không chạy được:
+
+- `FileNotFoundError`: chạy lại setup/build.
+- Trang trắng hoặc HTTP 404: notebook có thể đang là bản cũ; mở lại notebook từ `main` và kiểm tra cell có `ngrok.connect`.
+- Lỗi xác thực ngrok: kiểm tra secret đúng tên `NGROK_AUTHTOKEN`, token còn hiệu lực và quyền notebook đã bật.
+- Colab vừa kết nối lại runtime: chạy lại toàn bộ cell từ đầu.
+- Link được tạo nhưng ứng dụng lỗi: xem log:
+
+```python
+print(open('/tmp/pixel_lab_streamlit.log', encoding='utf-8').read())
+```
+
 ## 9. Chạy ứng dụng B
 
 Build core trước:
@@ -185,11 +220,20 @@ Build core trước:
 .\.venv\Scripts\python.exe -m streamlit run .\app\app.py
 ```
 
-UI có ba chế độ:
+UI có hai tab:
+
+1. **Xử lý một ảnh**: tải ảnh riêng hoặc chọn trực tiếp một trong 300 ảnh BSDS300; chọn một bước, nhiều bước hoặc nhập yêu cầu AI; bấm **Chạy và xem chỉ số**.
+2. **Benchmark**: chọn kiểm tra đủ 300 ảnh hoặc đo hiệu năng báo cáo; bấm một nút để chạy Sequential/OpenMP và hiện thời gian, speedup, throughput, MAE cùng file CSV tải về.
+
+Ba cách tạo yêu cầu xử lý ảnh:
 
 1. Một thuật toán.
 2. Pipeline thủ công tối đa năm bước.
 3. AI từ mô tả tiếng Việt.
+
+- **Kiểm tra đủ 300 ảnh**: warm-up 1, đo 3 lần; dùng để kiểm tra độ đúng và độ phủ.
+- **Đo hiệu năng để làm báo cáo**: 15 ảnh nhiều độ phân giải, warm-up 3, đo 20 lần và thử các mức luồng phù hợp với CPU; khớp quy trình tại [`C_GUIDE.md`](C_GUIDE.md).
+- UI tự kiểm tra CUDA trước benchmark; chỉ thêm CUDA khi core trả đúng backend, không ghi fallback dưới nhãn CUDA.
 
 Thiết lập OpenAI trên Windows chỉ trong phiên terminal:
 
@@ -227,13 +271,13 @@ Dataset, archive, build, API key và kết quả tạm không được commit.
 
 ### A – Core
 
-- Triển khai CUDA Basic và CUDA Optimized.
-- Tách allocation/H2D/kernel/D2H/total bằng CUDA Event.
-- So sánh CUDA với Sequential bằng error metrics.
+- CUDA Basic và CUDA Optimized đã có trong core; tiếp tục đo để chọn block size tốt nhất theo GPU.
+- Timing allocation/H2D/kernel/D2H/total đã tách bằng CUDA Event và đồng hồ host.
+- Test CUDA so sánh kết quả với Sequential; tự bỏ qua có thông báo trên máy không có GPU.
 
 ### B – AI/UI
 
-- Code chức năng đã hoàn thiện trên PR #6.
+- Code chức năng đã merge vào `main` qua PR #6.
 - Việc thủ công còn lại: chạy prompt eval bằng key cá nhân, chụp ảnh demo và nhờ thành viên khác review PR.
 - Không gửi API key cho người khác và không lưu output chứa thông tin nhạy cảm.
 
@@ -258,7 +302,7 @@ git push -u origin feature/ten-nhiem-vu
 - Không push trực tiếp `main`.
 - Mỗi PR cần ít nhất một người khác review.
 - Không merge khi test đỏ, có conversation chưa resolve hoặc lẫn dataset/build/secret.
-- PR #6 phải merge trước khi C tạo branch báo cáo từ `main`.
+- PR #6 đã merge; C tạo branch báo cáo từ `main` mới nhất.
 
 ## 13. Tiêu chí hoàn thành dự án
 

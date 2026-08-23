@@ -10,6 +10,7 @@ from streamlit.testing.v1 import AppTest
 
 from app.mock_adapter import pip_process
 from app import pipeline_adapter
+from app import app as streamlit_app
 from app.pipeline_adapter import run_pipeline_step
 from app.pipeline_schema import MAX_OPERATIONS, validate_pipeline
 from app.prompt_test import TEST_PROMPTS, summary
@@ -167,4 +168,25 @@ def test_prompt_corpus_is_complete_and_has_unique_ids() -> None:
 def test_streamlit_app_renders_without_exception() -> None:
     app = AppTest.from_file(str(ROOT / "app" / "app.py")).run(timeout=15)
     assert not app.exception
-    assert app.title[0].value == "PIXEL LAB"
+    assert app.title[0].value == "So sánh xử lý ảnh"
+    assert any("Phiên bản Git đang chạy" in caption.value for caption in app.caption)
+    assert [tab.label for tab in app.tabs] == ["Xử lý một ảnh", "Benchmark 300 ảnh"]
+    assert any(selectbox.label == "Kích thước bộ lọc" for selectbox in app.selectbox)
+    assert any(button.label == "Chạy kiểm tra 300 ảnh và xem chỉ số" for button in app.button)
+
+    benchmark_profile = next(radio for radio in app.radio if radio.label == "Mục đích")
+    benchmark_profile.set_value("Đo hiệu năng để làm báo cáo").run(timeout=15)
+    assert not app.exception
+    assert any(button.label == "Chạy đo hiệu năng và xem chỉ số" for button in app.button)
+
+
+def test_ui_discovers_all_nested_bsds_images(tmp_path, monkeypatch) -> None:
+    image_root = tmp_path / "BSDS300" / "images"
+    (image_root / "train").mkdir(parents=True)
+    (image_root / "test").mkdir(parents=True)
+    (image_root / "train" / "one.jpg").write_bytes(b"test")
+    (image_root / "test" / "two.JPG").write_bytes(b"test")
+    (image_root / "test" / "ignore.txt").write_text("test", encoding="utf-8")
+    monkeypatch.setattr(streamlit_app, "DATASET_DIR", image_root)
+
+    assert [path.name for path in streamlit_app.dataset_images()] == ["two.JPG", "one.jpg"]

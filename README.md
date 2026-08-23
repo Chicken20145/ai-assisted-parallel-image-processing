@@ -1,121 +1,172 @@
-# Xử lý ảnh song song có AI hỗ trợ bằng OpenMP và CUDA
+# AI-Assisted Parallel Image Processing
 
-## Mục tiêu dự án
+Hệ thống xử lý ảnh song song sử dụng C++17, OpenMP và CUDA, kèm giao diện Streamlit và lớp AI chuyển yêu cầu tiếng Việt thành pipeline có cấu trúc. Dự án tập trung vào tính đúng đắn, khả năng tái lập benchmark và so sánh công bằng giữa CPU tuần tự, CPU đa luồng và GPU.
 
-Thiết kế, hiện thực và đánh giá một hệ thống xử lý ảnh song song gồm các phiên bản CPU tuần tự, OpenMP, CUDA cơ bản và CUDA tối ưu. Lớp AI hỗ trợ chuyển yêu cầu ngôn ngữ tự nhiên thành pipeline xử lý ảnh đã được kiểm tra tính hợp lệ.
+## Tính năng chính
 
-## Phạm vi cố định
+- Ba thuật toán: Gaussian Blur, Sobel Edge Detection và Histogram Equalization.
+- Bốn backend: CPU Sequential, OpenMP, CUDA Basic và CUDA Optimized.
+- API C++ thống nhất `pip::process()` cho mọi thuật toán và backend.
+- Giao diện Streamlit xử lý một ảnh, pipeline nhiều bước và benchmark bằng một nút.
+- AI parser dùng Structured Outputs; kết quả luôn được Pydantic kiểm tra trước khi thực thi.
+- Dataset BSDS300 gồm 300 ảnh và bộ benchmark 15 ảnh ở năm độ phân giải.
+- Timing CUDA tách riêng allocation, H2D, kernel, D2H và total.
+- Đánh giá speedup, efficiency, throughput, MAE, MSE và sai số pixel lớn nhất.
 
-Dự án tập trung vào đúng ba thuật toán:
+## Kiến trúc
 
-1. Gaussian Blur
-2. Sobel Edge Detection
-3. Histogram Equalization
+```text
+Người dùng
+   │
+   ▼
+Streamlit UI ── AI parser ── Pydantic validation
+   │
+   ▼
+Python adapter
+   │
+   ▼
+image_pipeline_cli
+   │
+   ▼
+pip::process()
+   ├── CPU Sequential
+   ├── OpenMP
+   ├── CUDA Basic
+   └── CUDA Optimized
+   │
+   ▼
+Ảnh kết quả + timing + CSV benchmark
+```
 
-Mỗi thuật toán có bốn phiên bản:
+AI chỉ tạo cấu hình pipeline. Toàn bộ xử lý pixel và số liệu timing chính thức được thực hiện bởi core C++/CUDA.
 
-- CPU tuần tự làm mốc so sánh
-- CPU song song bằng OpenMP
-- CUDA cơ bản
-- CUDA tối ưu
+## Bắt đầu nhanh trên Google Colab
 
-Dự án được xem là hoàn thành khi các phiên bản cho kết quả đúng, benchmark có thể tái lập, giao diện hoạt động ổn định và AI tạo được pipeline hợp lệ. Video, đa GPU, MPI, huấn luyện mô hình và triển khai cloud nằm ngoài phạm vi cốt lõi.
+Đây là cách được khuyến nghị vì Colab cung cấp sẵn GPU NVIDIA:
+
+1. Mở [`notebooks/colab_setup.ipynb`](notebooks/colab_setup.ipynb) bằng Google Colab.
+2. Chọn **Runtime → Change runtime type → T4 GPU**.
+3. Chạy các cell theo thứ tự từ trên xuống.
+4. Xác nhận CTest hiện `100% tests passed`.
+5. Chạy cell **Mở Streamlit UI trên Colab** và mở URL ngrok được tạo.
+
+Notebook tự clone `main`, tải và xác minh dataset, build Release, chạy test và chuẩn bị giao diện. Token ngrok phải được lưu trong Colab Secrets với tên `NGROK_AUTHTOKEN`; chế độ thủ công không cần khóa OpenAI.
+
+## Thiết lập trên Windows
+
+### Yêu cầu
+
+- Windows 10/11.
+- Visual Studio với workload **Desktop development with C++** và Windows SDK.
+- NVIDIA CUDA Toolkit và driver tương thích.
+- Python 3.10 trở lên.
+- Git.
+
+### Thiết lập và build
+
+```powershell
+git clone https://github.com/Chicken20145/ai-assisted-parallel-image-processing.git
+cd ai-assisted-parallel-image-processing
+.\scripts\setup_windows.ps1
+.\scripts\download_datasets.ps1
+.\.venv\Scripts\python.exe .\scripts\prepare_benchmark_data.py
+.\scripts\build_windows.ps1 -Configuration Release
+.\scripts\test_windows.ps1
+```
+
+Nếu đã có đầy đủ dependency, có thể build trực tiếp:
+
+```powershell
+cmake -S . -B build -DBUILD_TESTING=ON
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
+
+## Chạy giao diện
+
+Sau khi build core và kích hoạt môi trường Python:
+
+```powershell
+$env:PIP_CORE_CLI = "$PWD\build\Release\image_pipeline_cli.exe"
+.\.venv\Scripts\python.exe -m streamlit run app/app.py
+```
+
+Giao diện hỗ trợ:
+
+- Tải ảnh hoặc chọn ảnh từ BSDS300.
+- Chọn thuật toán, backend và tham số.
+- Ghép pipeline tối đa năm bước.
+- Tạo pipeline từ yêu cầu tiếng Việt khi có `OPENAI_API_KEY`.
+- Chạy kiểm tra đủ 300 ảnh hoặc benchmark hiệu năng chính thức.
+
+## Benchmark
+
+### Kiểm tra độ phủ
+
+Chế độ **Kiểm tra đủ 300 ảnh** chạy ba thuật toán trên toàn bộ BSDS300, đo ba lần mỗi cấu hình. Mục tiêu là xác nhận mọi backend chạy ổn định và cho kết quả đúng.
+
+### Đo hiệu năng chính thức
+
+Chế độ **Đo hiệu năng để làm báo cáo** sử dụng 15 ảnh ở năm độ phân giải, warm-up ba lần và đo 20 lần. Runner từ chối fallback để không ghi số liệu dưới sai backend.
+
+Chạy bằng dòng lệnh:
+
+```bash
+python scripts/run_benchmarks.py \
+  --input-dir data/external/benchmark_suite \
+  --output benchmarks/results/raw_results.csv \
+  --backends sequential openmp cuda_basic cuda_optimized \
+  --threads 1,2,4 \
+  --warmup 3 \
+  --runs 20
+
+python scripts/analyze_benchmarks.py \
+  --input benchmarks/results/raw_results.csv \
+  --summary benchmarks/results/summary.csv \
+  --plots benchmarks/results/plots
+```
+
+Không gộp kết quả từ các runtime có CPU/GPU khác nhau. Luôn lưu kèm file thông tin môi trường.
+
+## Kiểm thử
+
+CTest bao gồm:
+
+- Kiểm tra thuật toán CPU tuần tự.
+- Đối chiếu OpenMP với Sequential.
+- Đối chiếu CUDA Basic/Optimized với Sequential; tự bỏ qua có thông báo nếu không có GPU.
+- Kiểm tra tải và xác minh dataset.
+
+Các backend song song được so sánh với CPU tuần tự bằng MAE, MSE và sai số tuyệt đối lớn nhất.
 
 ## Cấu trúc repository
 
 ```text
-app/            Giao diện và tích hợp pipeline AI
-benchmarks/     Định nghĩa benchmark và kết quả sinh ra
-data/samples/   Ảnh kiểm thử dung lượng nhỏ
-docs/           Mục tiêu, nhiệm vụ, thiết kế và báo cáo
-include/        Header C++/CUDA dùng chung
-scripts/        Công cụ build và benchmark
-src/cpu/        Phiên bản CPU tuần tự
-src/openmp/     Phiên bản OpenMP
-src/cuda/       Phiên bản CUDA
-tests/          Kiểm tra tính đúng đắn và trường hợp biên
+app/          Streamlit UI, AI parser, schema và Python adapter
+benchmarks/   Cấu hình và kết quả benchmark sinh ra
+data/         Ảnh mẫu; dataset tải về không commit
+docs/         Kiến trúc, thiết lập và hướng dẫn benchmark
+include/      Public headers của core C++/CUDA
+notebooks/    Notebook Google Colab
+scripts/      Setup, build, download, benchmark và phân tích
+src/common/   API chung và error metrics
+src/cpu/      CPU Sequential
+src/openmp/   OpenMP
+src/cuda/     CUDA Basic và CUDA Optimized
+tests/        CTest và Python tests
 ```
 
-## Thiết lập Windows
+## Phạm vi
 
-Hướng dẫn đầy đủ: [`docs/PROJECT.md`](docs/PROJECT.md).
+Dự án tập trung vào xử lý ảnh tĩnh trên một CPU và một GPU. Video thời gian thực, MPI, đa GPU, huấn luyện mô hình và triển khai production cloud không thuộc phạm vi hiện tại.
 
-Yêu cầu: Visual Studio có workload **Desktop development with C++**, CUDA Toolkit và Python 3.10 trở lên. Thiết lập nhanh trong PowerShell:
+## Tài liệu
 
-```powershell
-.\scripts\setup_windows.ps1
-.\scripts\download_datasets.ps1
-.\.venv\Scripts\python.exe .\scripts\prepare_benchmark_data.py
-.\scripts\check_environment.ps1
-.\scripts\build_windows.ps1 -Configuration Release
-```
+- [`docs/PROJECT.md`](docs/PROJECT.md): mục tiêu, kiến trúc, API, thiết lập và trạng thái dự án.
+- [`docs/C_GUIDE.md`](docs/C_GUIDE.md): quy trình benchmark, phân tích CSV và checklist báo cáo.
 
-Script tự tìm MSVC, CMake và Ninja đi kèm Visual Studio, kiểm tra checksum dữ liệu, tạo 15 ảnh benchmark ở năm độ phân giải và build chương trình ở chế độ Release.
+## Bảo mật và dữ liệu
 
-Chạy kiểm thử lõi CPU:
-
-```powershell
-.\scripts\test_windows.ps1 -BuildFirst
-```
-
-Chạy benchmark tổng hợp tối thiểu:
-
-```powershell
-.\build\image_benchmark.exe --algorithm gaussian_blur --backend sequential --width 1920 --height 1080 --channels 3 --kernel-size 5 --sigma 1.2 --warmup 3 --runs 20
-```
-
-API, thuật toán, dữ liệu và trạng thái hiện tại được mô tả trong [`docs/PROJECT.md`](docs/PROJECT.md).
-
-## Thiết lập Google Colab
-
-Hướng dẫn đầy đủ: [`docs/PROJECT.md`](docs/PROJECT.md).
-
-1. Mở [notebook thiết lập Colab](notebooks/colab_setup.ipynb) trên Google Colab.
-2. Chọn **Runtime → Change runtime type → GPU**.
-3. Chạy lần lượt các cell; cell chính gọi `scripts/setup_colab.sh` để cài dependency, tải dữ liệu, build Release và ghi cấu hình runtime.
-4. Chạy benchmark trên `/content`; chỉ sao chép kết quả cuối sang Google Drive để độ trễ Drive không ảnh hưởng phép đo.
-
-Repository là private nên mỗi thành viên phải có quyền collaborator và cấp quyền GitHub cho Colab. Với branch chứa dấu `/`, xem cách mở trong `docs/PROJECT.md`.
-
-Có thể chạy trực tiếp trong một repository đã clone:
-
-```bash
-bash scripts/setup_colab.sh
-```
-
-Khi đã setup trong cùng runtime và chỉ cần cập nhật code mới:
-
-```bash
-git pull --ff-only
-bash scripts/build_colab.sh
-bash scripts/test_colab.sh
-```
-
-GPU, CPU, CUDA và giới hạn Colab có thể thay đổi giữa các phiên. Không gộp số đo của các phiên có cấu hình khác nhau nếu không ghi chú rõ.
-
-## Build thủ công
-
-Yêu cầu: CMake, trình biên dịch C++, CUDA Toolkit và trình biên dịch hỗ trợ OpenMP.
-
-```powershell
-cmake -S . -B build
-cmake --build build --config Release
-./build/Release/parallel_image_processing.exe
-```
-
-Với trình build một cấu hình, file thực thi có thể nằm trực tiếp trong `build/`.
-
-## Chỉ số đánh giá
-
-- Tổng thời gian xử lý end-to-end
-- Thời gian CUDA kernel và truyền dữ liệu CPU–GPU
-- Speedup: `S(p) = T(1) / T(p)`
-- Hiệu suất OpenMP: `E(p) = S(p) / p`
-- Thông lượng triệu pixel/giây
-- MAE/MSE so với phiên bản CPU tuần tự
-
-Tài liệu chính của dự án:
-
-- [`docs/PROJECT.md`](docs/PROJECT.md): dự án có gì, phạm vi, API và trạng thái.
-- [`docs/PROJECT.md`](docs/PROJECT.md): toàn bộ mục tiêu, kiến trúc, trạng thái, setup và phân công dự án.
-- [`docs/C_GUIDE.md`](docs/C_GUIDE.md): lệnh benchmark, CSV, biểu đồ và checklist bàn giao riêng cho C.
+- Không commit API key, ngrok token, dataset archive hoặc kết quả benchmark dung lượng lớn.
+- Không tải ảnh nhạy cảm lên URL ngrok công khai.
+- Chỉ sử dụng nguồn dữ liệu có giấy phép và lưu metadata/checksum để tái lập thí nghiệm.

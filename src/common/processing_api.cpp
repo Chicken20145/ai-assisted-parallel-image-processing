@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "cpu_algorithms.hpp"
+#include "cuda_algorithms.hpp"
 #include "openmp_algorithms.hpp"
 
 namespace pip {
@@ -31,8 +32,7 @@ ProcessingResult process(
                           "Ảnh phải có width/height dương, 1 hoặc 3 kênh và buffer liên tục đúng kích thước.");
     }
     if (backend == Backend::CudaBasic || backend == Backend::CudaOptimized) {
-        return make_error(backend, ProcessingError::BackendUnavailable,
-                          "Backend CUDA này chưa được triển khai.");
+        return cuda_backend::process_cuda(input, algorithm, params, backend);
     }
 
     const auto started = std::chrono::steady_clock::now();

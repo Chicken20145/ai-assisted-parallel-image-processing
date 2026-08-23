@@ -7,7 +7,7 @@
 1. File environment của đúng phiên/máy đo.
 2. CSV thô lưu từng lần chạy.
 3. CSV summary có mean, standard deviation, speedup, efficiency và throughput.
-4. Biểu đồ OpenMP theo thread count; sau này bổ sung CUDA theo block size.
+4. Biểu đồ OpenMP theo thread count và CUDA trên runtime có GPU.
 5. Xác nhận MAE/MSE/max error so với Sequential.
 6. Nhận xét kỹ thuật, cấu hình máy và cách tái lập.
 
@@ -20,14 +20,11 @@ Không chấp nhận số liệu chỉ chụp từ UI, thiếu CSV thô, thiếu
 - `scripts/analyze_benchmarks.py`: tổng hợp mean/std/speedup/efficiency/throughput và vẽ biểu đồ.
 - `tests/test_benchmark_workflow.py`: test ma trận cấu hình, error metrics và công thức summary.
 
-Runner cố ý từ chối nếu backend chạy thật khác backend yêu cầu. Vì vậy CUDA chưa triển khai sẽ báo lỗi thay vì ghi nhầm số liệu fallback thành CUDA.
+Runner cố ý từ chối nếu backend chạy thật khác backend yêu cầu. UI chỉ đưa CUDA vào benchmark sau khi probe thành công, nên không ghi nhầm fallback thành CUDA.
 
 ## 3. Khi nào C bắt đầu
 
-C có thể smoke test ngay trên branch `feature/ui-manual-mode`. Để làm kết quả chính thức:
-
-1. Chờ PR #6 được review và merge.
-2. Tạo branch riêng từ `main` mới nhất.
+PR #6 đã merge. C tạo branch riêng từ `main` mới nhất trước khi làm kết quả chính thức:
 
 ```powershell
 git switch main
@@ -185,11 +182,9 @@ drive.mount('/content/drive')
 
 Sao chép cả raw CSV, summary, plots và `environment_colab.txt` sang cùng một thư mục Drive.
 
-## 10. CUDA sau khi A bàn giao
+## 10. Benchmark CUDA
 
-Không thêm `cuda_basic` hoặc `cuda_optimized` vào benchmark chính thức khi core còn trả `BackendUnavailable`.
-
-Sau khi A merge CUDA và test chính xác đạt:
+Sau khi mở Colab bằng GPU và build thành công, UI tự thêm `cuda_basic` và `cuda_optimized`. Nếu muốn chạy bằng dòng lệnh:
 
 ```powershell
 .\.venv\Scripts\python.exe .\scripts\run_benchmarks.py `
@@ -200,7 +195,7 @@ Sau khi A merge CUDA và test chính xác đạt:
   --environment windows_gpu_c
 ```
 
-Khi CUDA hoàn chỉnh, C bổ sung block size 8×8, 16×16, 32×8 hoặc cấu hình A bàn giao; CSV phải có H2D/kernel/D2H/total và error metrics. Runner hiện để sẵn `block_x`, `block_y`; A/C mở rộng CLI khi backend CUDA nhận block size.
+Core hiện dùng block 16×16 cho CUDA cơ bản và 32×8 cho CUDA tối ưu. CSV đã có H2D/kernel/D2H/total và error metrics; `block_x`, `block_y` được giữ sẵn để bổ sung lựa chọn block size trong thí nghiệm nâng cao.
 
 ## 11. Cách phân tích báo cáo
 
@@ -218,7 +213,7 @@ Không kết luận “backend X luôn nhanh nhất” từ một ảnh hoặc m
 
 ## 12. Checklist trước khi bàn giao
 
-- [ ] PR #6 đã merge và C tạo branch từ `main` mới nhất.
+- [ ] C đã pull `main` chứa merge commit PR #6 và tạo branch riêng.
 - [ ] Build Release, CTest và pytest đạt.
 - [ ] Đủ dataset/metadata/checksum.
 - [ ] Có environment đúng phiên.

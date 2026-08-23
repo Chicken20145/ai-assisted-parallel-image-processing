@@ -7,6 +7,7 @@ set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 find_package(OpenMP REQUIRED)
+find_package(CUDAToolkit REQUIRED)
 find_package(Python3 COMPONENTS Interpreter)
 
 add_library(image_processing_core
@@ -21,9 +22,12 @@ add_library(image_processing_core
     src/openmp/gaussian_openmp.cpp
     src/openmp/sobel_openmp.cpp
     src/openmp/histogram_equalization_openmp.cpp
+    src/cuda/cuda_algorithms.cu
 )
 target_include_directories(image_processing_core PUBLIC include)
-target_link_libraries(image_processing_core PUBLIC OpenMP::OpenMP_CXX)
+target_link_libraries(image_processing_core PUBLIC OpenMP::OpenMP_CXX CUDA::cudart)
+set_target_properties(image_processing_core PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_compile_options(image_processing_core PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--fmad=false>)
 
 add_executable(parallel_image_processing
     src/main.cpp
@@ -54,6 +58,10 @@ if(BUILD_TESTING)
     add_executable(openmp_algorithm_tests tests/test_openmp_algorithms.cpp)
     target_link_libraries(openmp_algorithm_tests PRIVATE image_processing_core)
     add_test(NAME openmp_algorithm_tests COMMAND openmp_algorithm_tests)
+
+    add_executable(cuda_algorithm_tests tests/test_cuda_algorithms.cpp)
+    target_link_libraries(cuda_algorithm_tests PRIVATE image_processing_core)
+    add_test(NAME cuda_algorithm_tests COMMAND cuda_algorithm_tests)
 
     if(Python3_Interpreter_FOUND)
         add_test(
