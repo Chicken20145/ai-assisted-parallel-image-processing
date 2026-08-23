@@ -157,13 +157,13 @@ Build/test riêng:
 
 ## 8. Thiết lập Google Colab
 
-Repository private nên tài khoản phải là collaborator. Trong lúc PR #7 chưa merge, mở notebook đã sửa trên branch:
+Mở notebook chính thức trên nhánh `main`:
 
 ```text
-https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/codex%2Ffix-colab-streamlit-proxy/notebooks/colab_setup.ipynb
+https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/main/notebooks/colab_setup.ipynb
 ```
 
-Sau khi PR #7 merge, dùng notebook trên `main`. Nếu không mở được: **File → Open notebook → GitHub**, bật kho private, authorize GitHub, chọn branch `codex/fix-colab-streamlit-proxy` và `notebooks/colab_setup.ipynb`.
+Nếu không mở được: **File → Open notebook → GitHub**, chọn repository, branch `main` và `notebooks/colab_setup.ipynb`.
 
 Trình tự chạy lần đầu:
 
@@ -202,7 +202,7 @@ URL ngrok là URL công khai trong thời gian runtime còn hoạt động. Khô
 Nếu không chạy được:
 
 - `FileNotFoundError`: chạy lại setup/build.
-- Trang trắng hoặc HTTP 404: notebook vẫn là bản cũ; mở lại branch `codex/fix-colab-streamlit-proxy` và kiểm tra cell có `ngrok.connect`.
+- Trang trắng hoặc HTTP 404: notebook có thể đang là bản cũ; mở lại notebook từ `main` và kiểm tra cell có `ngrok.connect`.
 - Lỗi xác thực ngrok: kiểm tra secret đúng tên `NGROK_AUTHTOKEN`, token còn hiệu lực và quyền notebook đã bật.
 - Colab vừa kết nối lại runtime: chạy lại toàn bộ cell từ đầu.
 - Link được tạo nhưng ứng dụng lỗi: xem log:

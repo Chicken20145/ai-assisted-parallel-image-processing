@@ -12,7 +12,7 @@ def test_colab_notebook_contains_streamlit_proxy_launcher() -> None:
     source = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
 
     assert notebook["nbformat"] == 4
-    assert "GIT_REF = 'codex/fix-colab-streamlit-proxy'" in source
+    assert "GIT_REF = 'main'" in source
     assert "ĐÃ ĐỒNG BỘ GITHUB" in source
     assert "local_commit != remote_commit" in source
     assert "ngrok.connect(8501, bind_tls=True)" in source
