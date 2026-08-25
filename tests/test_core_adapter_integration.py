@@ -51,7 +51,7 @@ def test_real_openmp_matches_real_sequential(algorithm: str, params: dict) -> No
     np.testing.assert_array_equal(np.asarray(openmp.output_image), np.asarray(sequential.output_image))
 
 
-def test_real_cuda_unavailable_falls_back_to_openmp() -> None:
+def test_real_cuda_runs_or_falls_back_to_openmp() -> None:
     response = run_pipeline_step(
         sample_image(),
         "sobel",
@@ -61,9 +61,13 @@ def test_real_cuda_unavailable_falls_back_to_openmp() -> None:
     )
     assert response.ok, response.friendly_error
     assert response.requested_backend == "cuda_optimized"
-    assert response.actual_backend == "openmp"
-    assert response.fallback_happened
-    assert response.threads_used == 2
+    if response.actual_backend == "cuda_optimized":
+        assert not response.fallback_happened
+        assert response.threads_used == 256
+    else:
+        assert response.actual_backend == "openmp"
+        assert response.fallback_happened
+        assert response.threads_used == 2
 
 
 def test_real_core_error_is_mapped_for_python() -> None:

@@ -19,7 +19,12 @@ def test_colab_notebook_contains_streamlit_proxy_launcher() -> None:
     assert "userdata.get('NGROK_AUTHTOKEN')" in source
     assert "build-colab' / 'image_pipeline_cli" in source
     assert "127.0.0.1:8501/_stcore/health" in source
-    assert "Mở Pixel Lab Streamlit UI" in source
+    assert "#@title 1. Kiểm tra GPU" in source
+    assert "#@title 2. Cài đặt dự án và chạy kiểm thử" in source
+    assert "#@title 3. Mở giao diện tương tác" in source
+    assert "CÀI ĐẶT HOÀN TẤT" in source
+    assert "image_count != 300" in source
+    assert "MỞ GIAO DIỆN PIXEL LAB" in source
 
     launcher = next(
         "".join(cell["source"])

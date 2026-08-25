@@ -1,4 +1,10 @@
 cmake_minimum_required(VERSION 3.24)
+
+# Phát hành SASS thật cho T4 (sm_75) và RTX 30 (sm_86), không phụ thuộc
+# driver phải biên dịch PTX được tạo bởi một CUDA Toolkit mới hơn.
+if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES "75-real;86-real")
+endif()
 project(parallel_image_processing LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 17)

@@ -11,7 +11,8 @@ Hệ thống xử lý ảnh song song sử dụng C++17, OpenMP và CUDA, kèm g
 - AI parser dùng Structured Outputs; kết quả luôn được Pydantic kiểm tra trước khi thực thi.
 - Dataset BSDS300 gồm 300 ảnh và bộ benchmark 15 ảnh ở năm độ phân giải.
 - Timing CUDA tách riêng allocation, H2D, kernel, D2H và total.
-- Đánh giá speedup, efficiency, throughput, MAE, MSE và sai số pixel lớn nhất.
+- Đánh giá speedup, efficiency, throughput và độ chính xác pixel bằng tổng sai lệch nguyên,
+  phân số MAE/MSE chính xác và sai lệch pixel lớn nhất.
 
 ## Kiến trúc
 
@@ -44,13 +45,15 @@ AI chỉ tạo cấu hình pipeline. Toàn bộ xử lý pixel và số liệu t
 
 Đây là cách được khuyến nghị vì Colab cung cấp sẵn GPU NVIDIA:
 
-1. Mở [`notebooks/colab_setup.ipynb`](notebooks/colab_setup.ipynb) bằng Google Colab.
-2. Chọn **Runtime → Change runtime type → T4 GPU**.
-3. Chạy các cell theo thứ tự từ trên xuống.
-4. Xác nhận CTest hiện `100% tests passed`.
-5. Chạy cell **Mở Streamlit UI trên Colab** và mở URL ngrok được tạo.
+[![Mở bằng Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/main/notebooks/colab_setup.ipynb)
 
-Notebook tự clone `main`, tải và xác minh dataset, build Release, chạy test và chuẩn bị giao diện. Token ngrok phải được lưu trong Colab Secrets với tên `NGROK_AUTHTOKEN`; chế độ thủ công không cần khóa OpenAI.
+1. Bấm nút **Mở bằng Google Colab** ở trên.
+2. Chọn **Runtime → Change runtime type → T4 GPU**.
+3. Tạo Colab Secret `NGROK_AUTHTOKEN` rồi chạy ba cell được đánh số 1, 2, 3.
+4. Khi cell số 2 hiện `CÀI ĐẶT HOÀN TẤT`, chạy cell số 3.
+5. Bấm nút **MỞ GIAO DIỆN PIXEL LAB** để bắt đầu demo.
+
+Notebook tự clone `main`, tải và xác minh đủ 300 ảnh, build Release, chạy test và chuẩn bị giao diện. Chế độ xử lý thủ công không cần khóa OpenAI. Các mục cập nhật GitHub và lưu Google Drive là tùy chọn, không cần dùng trong demo thông thường.
 
 ## Thiết lập trên Windows
 
@@ -137,7 +140,14 @@ CTest bao gồm:
 - Đối chiếu CUDA Basic/Optimized với Sequential; tự bỏ qua có thông báo nếu không có GPU.
 - Kiểm tra tải và xác minh dataset.
 
-Các backend song song được so sánh với CPU tuần tự bằng MAE, MSE và sai số tuyệt đối lớn nhất.
+Các backend song song được so sánh với CPU tuần tự bằng tổng sai lệch, tổng bình phương sai
+lệch, đúng số giá trị pixel-kênh đã so sánh và sai lệch tuyệt đối lớn nhất. MAE/MSE được lưu
+thêm dưới dạng phân số `tổng/số phần tử`, nên số 0 chỉ xuất hiện khi mọi pixel thực sự khớp.
+Benchmark cũng ghi mức thay đổi so với ảnh đầu vào; đây không phải ground truth chất lượng.
+
+Gaussian CPU/OpenMP/CUDA Optimized dùng phép lọc tách hai chiều, giảm chi phí từ `K²` xuống
+`2K`. OpenMP giữ một parallel region qua nhiều pha; CUDA Optimized dùng bộ nhớ chia sẻ cho
+Sobel/Histogram và tính CDF trực tiếp trên GPU.
 
 ## Cấu trúc repository
 
