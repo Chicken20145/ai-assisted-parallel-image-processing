@@ -45,13 +45,15 @@ AI chỉ tạo cấu hình pipeline. Toàn bộ xử lý pixel và số liệu t
 
 Đây là cách được khuyến nghị vì Colab cung cấp sẵn GPU NVIDIA:
 
-1. Mở [`notebooks/colab_setup.ipynb`](notebooks/colab_setup.ipynb) bằng Google Colab.
-2. Chọn **Runtime → Change runtime type → T4 GPU**.
-3. Chạy các cell theo thứ tự từ trên xuống.
-4. Xác nhận CTest hiện `100% tests passed`.
-5. Chạy cell **Mở Streamlit UI trên Colab** và mở URL ngrok được tạo.
+[![Mở bằng Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Chicken20145/ai-assisted-parallel-image-processing/blob/main/notebooks/colab_setup.ipynb)
 
-Notebook tự clone `main`, tải và xác minh dataset, build Release, chạy test và chuẩn bị giao diện. Token ngrok phải được lưu trong Colab Secrets với tên `NGROK_AUTHTOKEN`; chế độ thủ công không cần khóa OpenAI.
+1. Bấm nút **Mở bằng Google Colab** ở trên.
+2. Chọn **Runtime → Change runtime type → T4 GPU**.
+3. Tạo Colab Secret `NGROK_AUTHTOKEN` rồi chạy ba cell được đánh số 1, 2, 3.
+4. Khi cell số 2 hiện `CÀI ĐẶT HOÀN TẤT`, chạy cell số 3.
+5. Bấm nút **MỞ GIAO DIỆN PIXEL LAB** để bắt đầu demo.
+
+Notebook tự clone `main`, tải và xác minh đủ 300 ảnh, build Release, chạy test và chuẩn bị giao diện. Chế độ xử lý thủ công không cần khóa OpenAI. Các mục cập nhật GitHub và lưu Google Drive là tùy chọn, không cần dùng trong demo thông thường.
 
 ## Thiết lập trên Windows
 
