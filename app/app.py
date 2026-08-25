@@ -381,10 +381,19 @@ def show_benchmark_results(raw_result: Path, summary_result: Path, label: str) -
     raw = pd.read_csv(raw_result)
     summary = pd.read_csv(summary_result)
     st.subheader(f"Kết quả: {label}")
-    overview = st.columns(3)
+    has_exact_metrics = {
+        "backend_abs_error_sum", "backend_squared_error_sum", "backend_compared_values",
+        "backend_max_abs_error",
+    }.issubset(raw.columns)
+    overview = st.columns(4)
     overview[0].metric("Ảnh đã chạy", raw["image_name"].nunique())
     overview[1].metric("Số lần đo", len(raw))
-    overview[2].metric("Sai số MAE lớn nhất", f"{raw['mae'].max():.3f}")
+    if has_exact_metrics:
+        overview[2].metric("Lệch pixel backend lớn nhất", int(raw["backend_max_abs_error"].max()))
+        overview[3].metric("Lệch pixel so với đầu vào", int(raw["input_change_max_abs_error"].max()))
+    else:
+        overview[2].metric("MAE backend lớn nhất", repr(float(raw["mae"].max())))
+        overview[3].metric("Lệch pixel backend lớn nhất", int(raw["max_abs_error"].max()))
     present_backends = [name for name in BACKEND_LABELS if name in set(raw["backend"])]
     timing_columns = st.columns(min(4, len(present_backends)))
     for column, backend in zip(timing_columns, present_backends):
@@ -394,24 +403,79 @@ def show_benchmark_results(raw_result: Path, summary_result: Path, label: str) -
     table = (
         summary.groupby(["algorithm", "backend", "threads"], as_index=False)
         .agg(
-            kernel_ms=("kernel_ms_mean", "mean"),
-            total_ms=("total_ms_mean", "mean"),
-            speedup=("speedup", "mean"),
-            mae_max=("mae_max", "max"),
+            kernel_ms=("kernel_ms_mean", "median"),
+            total_ms=("total_ms_mean", "median"),
+            speedup=("speedup", "median"),
+            max_abs_error=("max_abs_error", "max"),
         )
         .rename(
             columns={
                 "algorithm": "Thuật toán",
                 "backend": "Backend",
                 "threads": "Số luồng",
-                "kernel_ms": "Kernel trung bình (ms)",
-                "total_ms": "Tổng trung bình (ms)",
-                "speedup": "Tăng tốc",
-                "mae_max": "MAE lớn nhất",
+                "kernel_ms": "Kernel trung vị (ms)",
+                "total_ms": "Tổng trung vị (ms)",
+                "speedup": "Tăng tốc trung vị",
+                "max_abs_error": "Lệch pixel backend lớn nhất",
             }
         )
     )
     st.dataframe(table, use_container_width=True, hide_index=True)
+    if has_exact_metrics:
+        metric_keys = [
+            "image_name", "algorithm", "backend", "threads", "kernel_size", "sigma", "threshold",
+        ]
+        measured_outputs = raw.drop_duplicates(metric_keys)
+        exact_table = (
+            measured_outputs.groupby(["algorithm", "backend", "threads"], as_index=False)
+            .agg(
+                backend_abs_sum=("backend_abs_error_sum", "sum"),
+                backend_squared_sum=("backend_squared_error_sum", "sum"),
+                backend_values=("backend_compared_values", "sum"),
+                backend_max=("backend_max_abs_error", "max"),
+                input_abs_sum=("input_abs_change_sum", "sum"),
+                input_squared_sum=("input_squared_change_sum", "sum"),
+                input_values=("input_compared_values", "sum"),
+                input_max=("input_change_max_abs_error", "max"),
+            )
+        )
+        exact_table["MAE backend (chính xác)"] = (
+            exact_table["backend_abs_sum"].astype(str) + "/" + exact_table["backend_values"].astype(str)
+        )
+        exact_table["MSE backend (chính xác)"] = (
+            exact_table["backend_squared_sum"].astype(str) + "/" + exact_table["backend_values"].astype(str)
+        )
+        exact_table["MAE thay đổi ảnh (chính xác)"] = (
+            exact_table["input_abs_sum"].astype(str) + "/" + exact_table["input_values"].astype(str)
+        )
+        exact_table["MSE thay đổi ảnh (chính xác)"] = (
+            exact_table["input_squared_sum"].astype(str) + "/" + exact_table["input_values"].astype(str)
+        )
+        exact_table = exact_table[
+            [
+                "algorithm", "backend", "threads", "MAE backend (chính xác)",
+                "MSE backend (chính xác)", "backend_max", "MAE thay đổi ảnh (chính xác)",
+                "MSE thay đổi ảnh (chính xác)", "input_max",
+            ]
+        ].rename(
+            columns={
+                "algorithm": "Thuật toán",
+                "backend": "Backend",
+                "threads": "Số luồng",
+                "backend_max": "Lệch backend lớn nhất",
+                "input_max": "Thay đổi lớn nhất",
+            }
+        )
+        st.markdown("#### Độ chính xác đầu ra")
+        st.caption(
+            "Các phân số là tổng sai lệch / đúng số giá trị pixel-kênh đã so sánh; "
+            "không làm tròn và không dùng số giả định."
+        )
+        st.dataframe(exact_table, use_container_width=True, hide_index=True)
+        st.caption(
+            "Sai khác backend so với CPU tuần tự đánh giá tính đúng của song song hóa. "
+            "Mức thay đổi so với ảnh đầu vào chỉ mô tả tác động của phép xử lý, không phải ground truth."
+        )
     downloads = st.columns(2)
     downloads[0].download_button(
         "Tải kết quả chi tiết",

@@ -122,7 +122,10 @@ struct Image {
 - `timing`: allocation, H2D, kernel, D2H và total.
 - `error`: `None`, `InvalidImage`, `InvalidParameters`, `BackendUnavailable`, `InternalError`.
 
-Gaussian giữ số kênh đầu vào. Sobel và Histogram Equalization trả grayscale một kênh. Sequential/OpenMP hiện phải khớp tuyệt đối: MAE/MSE/max error đều bằng 0.
+Gaussian giữ số kênh đầu vào. Sobel và Histogram Equalization trả grayscale một kênh.
+Sequential/OpenMP phải khớp tuyệt đối. Benchmark lưu tổng sai lệch nguyên, tổng bình phương,
+số giá trị đã so sánh và max error; MAE/MSE chính xác là phân số của các tổng này. Mức thay
+đổi so với ảnh đầu vào được ghi riêng và không được gọi là ground-truth error.
 
 ## 7. Thiết lập Windows
 

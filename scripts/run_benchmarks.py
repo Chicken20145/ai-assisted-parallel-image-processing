@@ -8,6 +8,7 @@ import platform
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
@@ -32,9 +33,41 @@ CSV_FIELDS = [
     "timestamp", "environment", "image_name", "algorithm", "image_width", "image_height",
     "channels", "requested_backend", "backend", "threads", "block_x", "block_y",
     "kernel_size", "sigma", "threshold", "run", "allocation_ms", "h2d_ms",
-    "kernel_ms", "d2h_ms", "total_ms", "mae", "mse", "max_abs_error",
+    "kernel_ms", "d2h_ms", "total_ms",
+    "backend_abs_error_sum", "backend_squared_error_sum", "backend_compared_values",
+    "backend_mae_exact", "backend_mse_exact", "backend_mae", "backend_mse",
+    "backend_max_abs_error",
+    "input_abs_change_sum", "input_squared_change_sum", "input_compared_values",
+    "input_change_mae_exact", "input_change_mse_exact", "input_change_mae",
+    "input_change_mse", "input_change_max_abs_error",
+    # Ba cột cũ được giữ để CSV cũ và công cụ ngoài dự án vẫn đọc được.
+    "mae", "mse", "max_abs_error",
     "throughput_mpix_s",
 ]
+
+
+@dataclass(frozen=True)
+class ExactErrorMetrics:
+    absolute_sum: int
+    squared_sum: int
+    count: int
+    maximum: int
+
+    @property
+    def mae(self) -> float:
+        return self.absolute_sum / self.count
+
+    @property
+    def mse(self) -> float:
+        return self.squared_sum / self.count
+
+    @property
+    def mae_exact(self) -> str:
+        return f"{self.absolute_sum}/{self.count}"
+
+    @property
+    def mse_exact(self) -> str:
+        return f"{self.squared_sum}/{self.count}"
 
 
 def discover_images(input_dir: Path, max_images: int | None = None) -> list[Path]:
@@ -107,13 +140,25 @@ def run_configuration(
         return payload, output_image
 
 
-def error_metrics(reference: Image.Image, candidate: Image.Image) -> tuple[float, float, int]:
-    reference_array = np.asarray(reference, dtype=np.float64)
-    candidate_array = np.asarray(candidate, dtype=np.float64)
+def exact_error_metrics(reference: Image.Image, candidate: Image.Image) -> ExactErrorMetrics:
+    reference_array = np.asarray(reference, dtype=np.int16)
+    candidate_array = np.asarray(candidate, dtype=np.int16)
     if reference_array.shape != candidate_array.shape:
         raise ValueError(f"Sai shape: reference={reference_array.shape}, candidate={candidate_array.shape}")
-    difference = np.abs(reference_array - candidate_array)
-    return float(difference.mean()), float(np.square(difference).mean()), int(difference.max())
+    difference = np.abs(reference_array - candidate_array).astype(np.int64, copy=False)
+    squared = np.square(difference, dtype=np.int64)
+    return ExactErrorMetrics(
+        absolute_sum=int(difference.sum(dtype=np.int64)),
+        squared_sum=int(squared.sum(dtype=np.int64)),
+        count=int(difference.size),
+        maximum=int(difference.max()),
+    )
+
+
+def error_metrics(reference: Image.Image, candidate: Image.Image) -> tuple[float, float, int]:
+    """API tương thích; phép đo chính xác nằm trong ``exact_error_metrics``."""
+    metrics = exact_error_metrics(reference, candidate)
+    return metrics.mae, metrics.mse, metrics.maximum
 
 
 def backend_configurations(backends: list[str], threads: list[int]) -> list[tuple[str, int]]:
@@ -182,6 +227,7 @@ def main(argv: list[str] | None = None) -> int:
                 _, reference = run_configuration(
                     executable, normalized, algorithm, "sequential", params, 1, 0, 1
                 )
+                input_reference = normalized.convert(reference.mode)
                 for backend, thread_count in configurations:
                     payload, candidate = run_configuration(
                         executable,
@@ -193,7 +239,8 @@ def main(argv: list[str] | None = None) -> int:
                         args.warmup,
                         args.runs,
                     )
-                    mae, mse, max_error = error_metrics(reference, candidate)
+                    backend_error = exact_error_metrics(reference, candidate)
+                    input_change = exact_error_metrics(input_reference, candidate)
                     for run_number, timing in enumerate(payload["timings"], start=1):
                         kernel_ms = float(timing["kernel_ms"])
                         writer.writerow(
@@ -217,9 +264,25 @@ def main(argv: list[str] | None = None) -> int:
                                 **{key: timing[key] for key in (
                                     "allocation_ms", "h2d_ms", "kernel_ms", "d2h_ms", "total_ms"
                                 )},
-                                "mae": mae,
-                                "mse": mse,
-                                "max_abs_error": max_error,
+                                "backend_abs_error_sum": backend_error.absolute_sum,
+                                "backend_squared_error_sum": backend_error.squared_sum,
+                                "backend_compared_values": backend_error.count,
+                                "backend_mae_exact": backend_error.mae_exact,
+                                "backend_mse_exact": backend_error.mse_exact,
+                                "backend_mae": backend_error.mae,
+                                "backend_mse": backend_error.mse,
+                                "backend_max_abs_error": backend_error.maximum,
+                                "input_abs_change_sum": input_change.absolute_sum,
+                                "input_squared_change_sum": input_change.squared_sum,
+                                "input_compared_values": input_change.count,
+                                "input_change_mae_exact": input_change.mae_exact,
+                                "input_change_mse_exact": input_change.mse_exact,
+                                "input_change_mae": input_change.mae,
+                                "input_change_mse": input_change.mse,
+                                "input_change_max_abs_error": input_change.maximum,
+                                "mae": backend_error.mae,
+                                "mse": backend_error.mse,
+                                "max_abs_error": backend_error.maximum,
                                 "throughput_mpix_s": (
                                     width * height / (kernel_ms * 1000.0) if kernel_ms > 0 else ""
                                 ),

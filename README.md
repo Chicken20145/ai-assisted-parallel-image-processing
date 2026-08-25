@@ -11,7 +11,8 @@ Hệ thống xử lý ảnh song song sử dụng C++17, OpenMP và CUDA, kèm g
 - AI parser dùng Structured Outputs; kết quả luôn được Pydantic kiểm tra trước khi thực thi.
 - Dataset BSDS300 gồm 300 ảnh và bộ benchmark 15 ảnh ở năm độ phân giải.
 - Timing CUDA tách riêng allocation, H2D, kernel, D2H và total.
-- Đánh giá speedup, efficiency, throughput, MAE, MSE và sai số pixel lớn nhất.
+- Đánh giá speedup, efficiency, throughput và độ chính xác pixel bằng tổng sai lệch nguyên,
+  phân số MAE/MSE chính xác và sai lệch pixel lớn nhất.
 
 ## Kiến trúc
 
@@ -137,7 +138,14 @@ CTest bao gồm:
 - Đối chiếu CUDA Basic/Optimized với Sequential; tự bỏ qua có thông báo nếu không có GPU.
 - Kiểm tra tải và xác minh dataset.
 
-Các backend song song được so sánh với CPU tuần tự bằng MAE, MSE và sai số tuyệt đối lớn nhất.
+Các backend song song được so sánh với CPU tuần tự bằng tổng sai lệch, tổng bình phương sai
+lệch, đúng số giá trị pixel-kênh đã so sánh và sai lệch tuyệt đối lớn nhất. MAE/MSE được lưu
+thêm dưới dạng phân số `tổng/số phần tử`, nên số 0 chỉ xuất hiện khi mọi pixel thực sự khớp.
+Benchmark cũng ghi mức thay đổi so với ảnh đầu vào; đây không phải ground truth chất lượng.
+
+Gaussian CPU/OpenMP/CUDA Optimized dùng phép lọc tách hai chiều, giảm chi phí từ `K²` xuống
+`2K`. OpenMP giữ một parallel region qua nhiều pha; CUDA Optimized dùng bộ nhớ chia sẻ cho
+Sobel/Histogram và tính CDF trực tiếp trên GPU.
 
 ## Cấu trúc repository
 

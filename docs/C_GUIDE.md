@@ -8,7 +8,7 @@
 2. CSV thô lưu từng lần chạy.
 3. CSV summary có mean, standard deviation, speedup, efficiency và throughput.
 4. Biểu đồ OpenMP theo thread count và CUDA trên runtime có GPU.
-5. Xác nhận MAE/MSE/max error so với Sequential.
+5. Xác nhận tổng sai lệch, phân số MAE/MSE chính xác và max error so với Sequential.
 6. Nhận xét kỹ thuật, cấu hình máy và cách tái lập.
 
 Không chấp nhận số liệu chỉ chụp từ UI, thiếu CSV thô, thiếu environment, trộn hai máy/phiên Colab hoặc backend đã fallback.
@@ -17,7 +17,9 @@ Không chấp nhận số liệu chỉ chụp từ UI, thiếu CSV thô, thiếu
 
 - `image_pipeline_cli`: đọc ảnh thật, warm-up và chạy nhiều lần trong cùng một process.
 - `scripts/run_benchmarks.py`: duyệt dataset, gọi core, kiểm tra backend, tính error metrics và ghi CSV.
-- `scripts/analyze_benchmarks.py`: tổng hợp mean/std/speedup/efficiency/throughput và vẽ biểu đồ.
+- `scripts/analyze_benchmarks.py`: tổng hợp mean/std/speedup/efficiency/throughput; biểu đồ
+  hiển thị từng ảnh đo thật và đường trung vị, không biến độ phân tán giữa các độ phân giải
+  thành “thanh sai số” của thuật toán.
 - `tests/test_benchmark_workflow.py`: test ma trận cấu hình, error metrics và công thức summary.
 
 Runner cố ý từ chối nếu backend chạy thật khác backend yêu cầu. UI chỉ đưa CUDA vào benchmark sau khi probe thành công, nên không ghi nhầm fallback thành CUDA.
@@ -80,7 +82,8 @@ Kết quả đúng:
 
 - 6 dòng raw: 1 ảnh × 1 thuật toán × 3 cấu hình × 2 runs.
 - Backend gồm Sequential, OpenMP 1 thread, OpenMP 2 thread.
-- `mae`, `mse`, `max_abs_error` đều bằng 0.
+- Các cột `backend_*` cho biết sai khác so với Sequential; MAE/MSE chính xác được ghi dưới
+  dạng `tổng sai lệch/số giá trị đã so sánh`.
 - Có `smoke_summary.csv` và ảnh `speedup_sobel.png`.
 
 ## 6. Benchmark CPU/OpenMP chính thức
@@ -124,7 +127,7 @@ Summary có:
 - `sequential_kernel_ms`.
 - `speedup = T_sequential / T_backend`.
 - `efficiency = speedup / threads` cho OpenMP.
-- `mae_max`.
+- `mae_max`, `mse_max`, `max_abs_error` và các tổng sai lệch nguyên để tái tính chính xác.
 
 Mỗi biểu đồ phải ghi thuật toán, đơn vị, môi trường và số luồng. Speedup dưới 1 ở ảnh nhỏ không phải lỗi; overhead song song có thể lớn hơn lợi ích.
 
@@ -143,7 +146,8 @@ Yêu cầu:
 - Đúng số dòng dự kiến.
 - Mỗi cấu hình có đúng 20 runs.
 - `requested_backend == backend` cho mọi dòng.
-- Sequential/OpenMP: MAE/MSE/max error bằng 0.
+- Sequential/OpenMP phải khớp tuyệt đối. CUDA Gaussian Basic được phép lệch tối đa một mức
+  xám do dùng tích chập 2D trực tiếp, trong khi baseline tối ưu dùng Gaussian tách hai chiều.
 - Không có timing âm/rỗng.
 - Standard deviation không bất thường; nếu có outlier phải chạy lại trong môi trường sạch và ghi chú.
 
@@ -195,7 +199,9 @@ Sau khi mở Colab bằng GPU và build thành công, UI tự thêm `cuda_basic`
   --environment windows_gpu_c
 ```
 
-Core hiện dùng block 16×16 cho CUDA cơ bản và 32×8 cho CUDA tối ưu. CSV đã có H2D/kernel/D2H/total và error metrics; `block_x`, `block_y` được giữ sẵn để bổ sung lựa chọn block size trong thí nghiệm nâng cao.
+Core dùng block 16×16 cho CUDA cơ bản và 32×8 cho CUDA tối ưu. Gaussian Optimized chạy hai
+pass tách chiều; Sobel Optimized dùng tile shared memory; Histogram Optimized dùng histogram
+cục bộ theo block và CDF trên GPU. CSV có H2D/kernel/D2H/total cùng các tổng sai lệch nguyên.
 
 ## 11. Cách phân tích báo cáo
 
@@ -207,7 +213,8 @@ Với từng thuật toán và độ phân giải, trả lời:
 4. Gaussian, Sobel hay Histogram hưởng lợi nhiều nhất và vì sao?
 5. Standard deviation có ổn định không?
 6. CUDA kernel nhanh nhưng total có bị H2D/D2H chi phối không?
-7. Mọi backend có giữ sai số trong ngưỡng không?
+7. Mọi backend có giữ sai khác pixel trong ngưỡng không? Không gọi mức thay đổi so với ảnh
+   đầu vào là sai số chất lượng nếu chưa có ground truth.
 
 Không kết luận “backend X luôn nhanh nhất” từ một ảnh hoặc một lần chạy.
 

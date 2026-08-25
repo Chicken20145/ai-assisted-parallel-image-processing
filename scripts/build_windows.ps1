@@ -25,7 +25,10 @@ if ($Clean -and (Test-Path -LiteralPath $buildDir)) {
     Remove-Item -LiteralPath $resolvedBuild -Recurse -Force
 }
 
-& $cmake -S $repoRoot -B $buildDir -G Ninja "-DCMAKE_BUILD_TYPE=$Configuration" "-DCMAKE_MAKE_PROGRAM=$ninja"
+& $cmake -S $repoRoot -B $buildDir -G Ninja `
+    "-DCMAKE_BUILD_TYPE=$Configuration" `
+    "-DCMAKE_MAKE_PROGRAM=$ninja" `
+    '-DCMAKE_CUDA_ARCHITECTURES=native'
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & $cmake --build $buildDir
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
